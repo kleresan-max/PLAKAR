@@ -14,41 +14,42 @@ export default async function handler(req, res) {
 
   try {
 
-    // Buscar últimos jogos dos dois times
     const response = await fetch(
-      `https://api.football-data.org/v4/matches?status=FINISHED&limit=50`,
+      `https://api.football-data.org/v4/matches?status=FINISHED`,
       {
-        headers: {
-          "X-Auth-Token": API_KEY
-        }
+        headers: { "X-Auth-Token": API_KEY }
       }
     );
 
     const data = await response.json();
-
-    const matches = data.matches;
+    const matches = data.matches || [];
 
     function calcularMedia(time) {
+
       const jogos = matches.filter(m =>
-        m.homeTeam.name === time || m.awayTeam.name === time
+        m.homeTeam?.name === time || m.awayTeam?.name === time
       ).slice(0,10);
+
+      if (jogos.length === 0) {
+        return { mediaMarcados: 1, mediaSofridos: 1 };
+      }
 
       let golsMarcados = 0;
       let golsSofridos = 0;
 
       jogos.forEach(jogo => {
         if (jogo.homeTeam.name === time) {
-          golsMarcados += jogo.score.fullTime.home;
-          golsSofridos += jogo.score.fullTime.away;
+          golsMarcados += jogo.score.fullTime.home ?? 0;
+          golsSofridos += jogo.score.fullTime.away ?? 0;
         } else {
-          golsMarcados += jogo.score.fullTime.away;
-          golsSofridos += jogo.score.fullTime.home;
+          golsMarcados += jogo.score.fullTime.away ?? 0;
+          golsSofridos += jogo.score.fullTime.home ?? 0;
         }
       });
 
       return {
-        mediaMarcados: golsMarcados / jogos.length || 1,
-        mediaSofridos: golsSofridos / jogos.length || 1
+        mediaMarcados: golsMarcados / jogos.length,
+        mediaSofridos: golsSofridos / jogos.length
       };
     }
 
@@ -58,11 +59,7 @@ export default async function handler(req, res) {
     const lambdaHome = (homeStats.mediaMarcados + awayStats.mediaSofridos) / 2;
     const lambdaAway = (awayStats.mediaMarcados + homeStats.mediaSofridos) / 2;
 
-    function fatorial(n){
-      if(n===0) return 1;
-      return n*fatorial(n-1);
-    }
-
+    function fatorial(n){ return n<=1 ? 1 : n*fatorial(n-1); }
     function poisson(k,lambda){
       return (Math.exp(-lambda)*Math.pow(lambda,k))/fatorial(k);
     }
