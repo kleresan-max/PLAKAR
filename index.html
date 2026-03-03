@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Plakar Radar Profissional</title>
+<title>Radar Profissional + Assertividade</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 
@@ -30,28 +30,13 @@ header{
   margin-bottom:40px;
 }
 
-.section h2{
-  border-left:4px solid #22c55e;
-  padding-left:10px;
-}
-
 .card{
   background:#1e293b;
   padding:10px 14px;
   margin-bottom:8px;
   border-radius:6px;
-  font-size:14px;
   display:flex;
   justify-content:space-between;
-  align-items:center;
-}
-
-.left{
-  max-width:70%;
-}
-
-.right{
-  text-align:right;
 }
 
 .small{
@@ -59,22 +44,15 @@ header{
   color:#94a3b8;
 }
 
-.strong{
-  color:#22c55e;
-  font-weight:bold;
-}
+.strong{ color:#22c55e; font-weight:bold; }
+.medium{ color:#84cc16; font-weight:bold; }
+.neutral{ color:#cbd5e1; }
 
-.medium{
-  color:#84cc16;
-  font-weight:bold;
-}
-
-.neutral{
-  color:#cbd5e1;
-}
-
-.loading{
-  font-size:18px;
+.panel{
+  background:#111827;
+  padding:20px;
+  border-radius:8px;
+  margin-top:40px;
 }
 
 </style>
@@ -82,109 +60,141 @@ header{
 <body>
 
 <header>
-🎯 Radar Profissional – Top 20 por Mercado (≥55%)  
-<span style="font-size:12px;color:#94a3b8;">Atualiza automaticamente a cada 10 minutos</span>
+🎯 Radar Profissional + Painel de Assertividade
 </header>
 
 <div class="container">
-<div id="conteudo" class="loading">Carregando análises...</div>
+
+<div id="conteudo">Carregando...</div>
+
+<div class="panel">
+<h2>📊 Painel de Assertividade</h2>
+<div id="estatisticas">Calculando...</div>
+</div>
+
 </div>
 
 <script>
 
-async function carregar(){
+function salvarPrevisao(registro){
+  let historico = JSON.parse(localStorage.getItem("historico") || "[]");
 
-  document.getElementById("conteudo").innerHTML = "Atualizando análises...";
+  const jaExiste = historico.find(h =>
+    h.jogo === registro.jogo &&
+    h.mercado === registro.mercado
+  );
+
+  if(!jaExiste){
+    historico.push(registro);
+    localStorage.setItem("historico", JSON.stringify(historico));
+  }
+}
+
+async function verificarResultados(){
+
+  let historico = JSON.parse(localStorage.getItem("historico") || "[]");
+
+  for(let registro of historico){
+
+    if(registro.status !== "pendente") continue;
+
+    const res = await fetch(`/api/result?home=${encodeURIComponent(registro.home)}&away=${encodeURIComponent(registro.away)}`);
+    const resultado = await res.json();
+
+    if(resultado.status !== "FINISHED") continue;
+
+    const golsCasa = resultado.homeGoals;
+    const golsFora = resultado.awayGoals;
+
+    let acertou = false;
+
+    if(registro.mercado === "Casa" && golsCasa > golsFora) acertou = true;
+    if(registro.mercado === "Fora" && golsFora > golsCasa) acertou = true;
+    if(registro.mercado === "Over" && (golsCasa + golsFora) > 2) acertou = true;
+    if(registro.mercado === "BTTS" && golsCasa > 0 && golsFora > 0) acertou = true;
+
+    registro.status = acertou ? "acerto" : "erro";
+  }
+
+  localStorage.setItem("historico", JSON.stringify(historico));
+  atualizarEstatisticas();
+}
+
+function atualizarEstatisticas(){
+
+  let historico = JSON.parse(localStorage.getItem("historico") || "[]");
+
+  const finalizados = historico.filter(h => h.status !== "pendente");
+
+  const acertos = finalizados.filter(h => h.status === "acerto").length;
+  const erros = finalizados.filter(h => h.status === "erro").length;
+
+  const total = finalizados.length;
+  const taxa = total > 0 ? ((acertos/total)*100).toFixed(2) : 0;
+
+  document.getElementById("estatisticas").innerHTML = `
+    Total Avaliado: ${total}<br>
+    Acertos: ${acertos}<br>
+    Erros: ${erros}<br>
+    Taxa Geral: ${taxa}%
+  `;
+}
+
+async function carregar(){
 
   const res = await fetch("/api/games");
   const jogos = await res.json();
 
-  let casa = [];
-  let fora = [];
-  let over = [];
-  let btts = [];
+  let conteudo = "";
 
-  for(const jogo of jogos.slice(0,25)){
+  for(const jogo of jogos.slice(0,20)){
 
     const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
     const data = await r.json();
 
-    function oddJusta(prob){
-      return (1/prob).toFixed(2);
-    }
+    const mercados = [
+      { nome:"Casa", prob:data.probCasa },
+      { nome:"Fora", prob:data.probFora },
+      { nome:"Over", prob:data.over25 },
+      { nome:"BTTS", prob:data.btts }
+    ];
 
-    function forcaClasse(prob){
-      if(prob >= 0.70) return "strong";
-      if(prob >= 0.60) return "medium";
-      return "neutral";
-    }
+    mercados.forEach(m=>{
+      if(m.prob >= 0.55){
 
-    if(data.probCasa >= 0.55){
-      casa.push({ jogo:`${jogo.home} vs ${jogo.away}`, prob:data.probCasa });
-    }
+        salvarPrevisao({
+          jogo:`${jogo.home} vs ${jogo.away}`,
+          home:jogo.home,
+          away:jogo.away,
+          mercado:m.nome,
+          prob:m.prob,
+          status:"pendente"
+        });
 
-    if(data.probFora >= 0.55){
-      fora.push({ jogo:`${jogo.home} vs ${jogo.away}`, prob:data.probFora });
-    }
+        const classe = m.prob >=0.70 ? "strong" :
+                       m.prob >=0.60 ? "medium" : "neutral";
 
-    if(data.over25 >= 0.55){
-      over.push({ jogo:`${jogo.home} vs ${jogo.away}`, prob:data.over25 });
-    }
-
-    if(data.btts >= 0.55){
-      btts.push({ jogo:`${jogo.home} vs ${jogo.away}`, prob:data.btts });
-    }
-  }
-
-  casa.sort((a,b)=>b.prob-a.prob);
-  fora.sort((a,b)=>b.prob-a.prob);
-  over.sort((a,b)=>b.prob-a.prob);
-  btts.sort((a,b)=>b.prob-a.prob);
-
-  function render(lista, titulo){
-
-    if(lista.length===0){
-      return `
-        <div class="section">
-          <h2>${titulo}</h2>
-          <div class="card">Nenhuma oportunidade ≥55%</div>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="section">
-        <h2>${titulo}</h2>
-        ${lista.slice(0,20).map((item,i)=>`
+        conteudo += `
           <div class="card">
-            <div class="left">
-              ${i+1}. ${item.jogo}
+            <div>
+              ${m.nome} – ${jogo.home} vs ${jogo.away}
+              <div class="small">${(m.prob*100).toFixed(2)}% | Odd Justa ${(1/m.prob).toFixed(2)}</div>
             </div>
-            <div class="right">
-              <div class="${item.prob >=0.70 ? 'strong' : item.prob>=0.60 ? 'medium' : 'neutral'}">
-                ${(item.prob*100).toFixed(2)}%
-              </div>
-              <div class="small">
-                Odd Justa: ${(1/item.prob).toFixed(2)}
-              </div>
+            <div class="${classe}">
+              ${(m.prob*100).toFixed(2)}%
             </div>
           </div>
-        `).join("")}
-      </div>
-    `;
+        `;
+      }
+    });
   }
 
-  document.getElementById("conteudo").innerHTML =
-      render(casa,"🏠 Vitória Casa")
-    + render(fora,"🚩 Vitória Fora")
-    + render(over,"⚽ Over 2.5")
-    + render(btts,"🎯 Ambos Marcam");
+  document.getElementById("conteudo").innerHTML = conteudo;
 
+  verificarResultados();
 }
 
 carregar();
-
-/* 🔁 Atualiza automaticamente a cada 10 minutos */
 setInterval(carregar, 600000);
 
 </script>
