@@ -27,7 +27,10 @@ export default async function handler(req, res) {
       away: match.awayTeam.name,
       homeId: match.homeTeam.id,
       awayId: match.awayTeam.id,
+      homeCrest: match.homeTeam.crest,
+      awayCrest: match.awayTeam.crest,
       competition: match.competition.name,
+      country: match.competition.area?.name || "",
       status: match.status
     }));
 
