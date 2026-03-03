@@ -18,33 +18,27 @@ body{
   animation:gradientMove 15s ease infinite;
   color:white;
 }
-
 @keyframes gradientMove{
   0%{background-position:0% 50%}
   50%{background-position:100% 50%}
   100%{background-position:0% 50%}
 }
-
 header{
   padding:20px;
   text-align:center;
   font-size:22px;
   font-weight:800;
   background:rgba(0,0,0,0.4);
-  backdrop-filter:blur(8px);
 }
-
-/* BOTÕES */
 .top-buttons{
   display:flex;
   justify-content:center;
-  gap:10px;
-  padding:10px;
+  gap:8px;
   flex-wrap:wrap;
+  padding:10px;
 }
-
 .top-buttons button{
-  padding:8px 16px;
+  padding:8px 14px;
   border-radius:20px;
   border:none;
   cursor:pointer;
@@ -52,126 +46,63 @@ header{
   color:white;
   font-weight:600;
 }
-
-.top-buttons .active{
-  background:#22c55e;
-}
-
-/* CONTAINER */
+.top-buttons .active{background:#22c55e}
 .container{
   padding:15px;
   max-width:1100px;
   margin:auto;
 }
-
-/* LIGA */
-.league{
-  margin-top:25px;
-  font-size:14px;
-  font-weight:600;
-  color:#94a3b8;
-  border-left:4px solid #22c55e;
-  padding-left:8px;
+select{
+  margin:10px 0;
+  padding:6px 10px;
+  border-radius:6px;
+  border:none;
 }
-
-/* CARD */
 .card{
-  background:rgba(30,41,59,0.85);
+  background:rgba(30,41,59,0.9);
   margin-top:15px;
   padding:15px;
   border-radius:14px;
   box-shadow:0 8px 25px rgba(0,0,0,0.5);
 }
-
-/* MATCH */
 .match{
   display:flex;
   justify-content:space-between;
   align-items:center;
 }
-
 .team{
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:6px;
   width:35%;
 }
-
-.team img{
-  width:30px;
-  height:30px;
-}
-
-.score{
-  font-size:22px;
-  font-weight:800;
-  width:20%;
-  text-align:center;
-}
-
-/* PROB BAR */
-.prob-container{
-  margin-top:12px;
-}
-
-.prob-label{
-  font-size:12px;
-  margin-bottom:4px;
-}
-
-.bar{
-  height:6px;
-  background:#0f172a;
-  border-radius:10px;
-  overflow:hidden;
-}
-
-.fill{
-  height:100%;
-  background:#22c55e;
-}
-
-/* CONF */
-.conf{
-  font-size:11px;
-  margin-top:6px;
-}
-
+.team img{width:28px;height:28px}
+.score{font-size:20px;font-weight:800;width:20%;text-align:center}
+.live{background:#ef4444;padding:3px 6px;border-radius:6px;font-size:10px;animation:pulse 1s infinite}
+@keyframes pulse{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
+.bar{height:6px;background:#0f172a;border-radius:10px;overflow:hidden;margin-top:4px}
+.fill{height:100%;background:#22c55e}
+.conf{font-size:11px;margin-top:4px}
 .alta{color:#22c55e}
 .media{color:#facc15}
 .baixa{color:#ef4444}
-
-/* BADGE */
-.gold{
-  background:#d4af37;
-  color:black;
-  padding:3px 6px;
-  border-radius:6px;
-  font-size:10px;
-  margin-left:8px;
-}
-
-/* RANKING */
-.ranking{
-  margin-top:20px;
+.gold{background:#d4af37;color:black;padding:2px 6px;border-radius:6px;font-size:10px;margin-left:6px}
+.ranking,.historico{
   background:#111827;
-  padding:15px;
+  padding:12px;
   border-radius:12px;
+  margin-top:15px;
 }
-
-.ranking h3{
-  margin-top:0;
+.small{font-size:12px;color:#94a3b8}
+.forma span{
+  display:inline-block;
+  width:10px;height:10px;
+  border-radius:50%;
+  margin-right:4px;
 }
-
-.rank-item{
-  font-size:12px;
-  margin-bottom:6px;
-}
-
-@media(max-width:600px){
-  .team span{font-size:12px}
-  .score{font-size:18px}
-}
+.win{background:#22c55e}
+.draw{background:#facc15}
+.loss{background:#ef4444}
 </style>
 </head>
 <body>
@@ -179,124 +110,153 @@ header{
 <header>⚡ KLERIN ANÁLISES AI</header>
 
 <div class="top-buttons">
-  <button onclick="mudarModo('radar')" class="active" id="btnRadar">Radar</button>
-  <button onclick="mudarModo('ouro')" id="btnOuro">Ouro</button>
-  <button onclick="mudarModo('prata')" id="btnPrata">Prata</button>
+<button onclick="modo='radar';carregar()" class="active" id="radarBtn">Radar</button>
+<button onclick="modo='ouro';carregar()" id="ouroBtn">Ouro</button>
+<button onclick="modo='prata';carregar()" id="prataBtn">Prata</button>
+<button onclick="modo='live';carregar()" id="liveBtn">Ao Vivo</button>
 </div>
 
 <div class="container">
-  <div id="ranking"></div>
-  <div id="conteudo"></div>
+<select id="ligaFiltro" onchange="carregar()">
+<option value="">Todas as Ligas</option>
+</select>
+
+<div id="ranking"></div>
+<div id="conteudo"></div>
+<div id="historico" class="historico"></div>
 </div>
 
 <script>
 
 let modo="radar";
 
-function mudarModo(novo){
-  modo=novo;
-  document.querySelectorAll('.top-buttons button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('btn'+novo.charAt(0).toUpperCase()+novo.slice(1)).classList.add('active');
-  carregar();
+function nivel(prob){
+if(prob>=0.70)return"alta";
+if(prob>=0.60)return"media";
+return"baixa";
 }
 
-function nivelConf(prob){
-  if(prob>=0.70) return "alta";
-  if(prob>=0.60) return "media";
-  return "baixa";
+function salvarHistorico(item){
+let hist=JSON.parse(localStorage.getItem("historico")||"[]");
+hist.push(item);
+localStorage.setItem("historico",JSON.stringify(hist));
+}
+
+function mostrarHistorico(){
+let hist=JSON.parse(localStorage.getItem("historico")||"[]");
+let acertos=hist.filter(h=>h.resultado==="acerto").length;
+let total=hist.length;
+let taxa=total?((acertos/total)*100).toFixed(1):0;
+document.getElementById("historico").innerHTML=`
+<h3>💎 Histórico Pessoal</h3>
+<div class="small">Total: ${total} | Acertos: ${acertos} | Taxa: ${taxa}%</div>
+`;
 }
 
 async function carregar(){
 
-  const res = await fetch("/api/games");
-  const jogos = await res.json();
+const res=await fetch("/api/games");
+const jogos=await res.json();
 
-  let html="";
-  let rankingLista=[];
+let html="";
+let rankingLista=[];
+let ligasSet=new Set();
 
-  for(const jogo of jogos){
+for(const jogo of jogos){
 
-    const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
-    const data = await r.json();
+ligasSet.add(jogo.competition);
+if(document.getElementById("ligaFiltro").value && jogo.competition!==document.getElementById("ligaFiltro").value) continue;
 
-    const mercados=[
-      {nome:"Casa",prob:data.probCasa},
-      {nome:"Fora",prob:data.probFora},
-      {nome:"Over 2.5",prob:data.over25},
-      {nome:"BTTS",prob:data.btts}
-    ];
+const r=await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
+const data=await r.json();
 
-    mercados.forEach(m=>{
-      rankingLista.push({
-        jogo: jogo.home+" vs "+jogo.away,
-        mercado:m.nome,
-        prob:m.prob
-      });
-    });
+const mercados=[
+{nome:"Casa",prob:data.probCasa},
+{nome:"Fora",prob:data.probFora},
+{nome:"Over 2.5",prob:data.over25},
+{nome:"BTTS",prob:data.btts}
+];
 
-    const temOuro = mercados.some(m=>m.prob>=0.70);
-    const temPrata = mercados.some(m=>m.prob>=0.60 && m.prob<0.70);
+mercados.forEach(m=>rankingLista.push({jogo:jogo.home+" vs "+jogo.away,mercado:m.nome,prob:m.prob}));
 
-    if(modo==="ouro" && !temOuro) continue;
-    if(modo==="prata" && !temPrata) continue;
+const temOuro=mercados.some(m=>m.prob>=0.70);
+const temPrata=mercados.some(m=>m.prob>=0.60&&m.prob<0.70);
+if(modo==="ouro"&&!temOuro)continue;
+if(modo==="prata"&&!temPrata)continue;
+if(modo==="live"&&jogo.status!=="LIVE")continue;
 
-    html+=`
-    <div class="league">${jogo.competition}</div>
-    <div class="card">
-      <div class="match">
-        <div class="team">
-          <img src="${jogo.homeCrest}">
-          <span>${jogo.home}</span>
-        </div>
-        <div class="score">- x -</div>
-        <div class="team" style="justify-content:flex-end;">
-          <span>${jogo.away}</span>
-          <img src="${jogo.awayCrest}">
-        </div>
-      </div>
-      ${mercados.map(m=>`
-        <div class="prob-container">
-          <div class="prob-label">
-            ${m.nome} ${(m.prob*100).toFixed(0)}%
-            ${m.prob>=0.70?'<span class="gold">OURO</span>':''}
-          </div>
-          <div class="bar">
-            <div class="fill" style="width:${m.prob*100}%"></div>
-          </div>
-          <div class="conf ${nivelConf(m.prob)}">
-            Confiança ${nivelConf(m.prob).toUpperCase()}
-          </div>
-        </div>
-      `).join("")}
-    </div>
-    `;
-  }
+html+=`
+<div class="card">
+<div class="match">
+<div class="team">
+<img src="${jogo.homeCrest}">
+<span>${jogo.home}</span>
+</div>
 
-  document.getElementById("conteudo").innerHTML=html;
+<div class="score">
+- x -
+${jogo.status==="LIVE"?'<div class="live">LIVE</div>':''}
+</div>
 
-  rankingLista.sort((a,b)=>b.prob-a.prob);
-  const top10=rankingLista.slice(0,10);
+<div class="team" style="justify-content:flex-end;">
+<span>${jogo.away}</span>
+<img src="${jogo.awayCrest}">
+</div>
+</div>
 
-  document.getElementById("ranking").innerHTML=`
-    <div class="ranking">
-      <h3>📊 Top 10 Oportunidades</h3>
-      ${top10.map(r=>`
-        <div class="rank-item">
-          ${r.jogo} — ${r.mercado} ${(r.prob*100).toFixed(0)}%
-        </div>
-      `).join("")}
-    </div>
-  `;
+<div class="forma small">Forma:
+<span class="win"></span>
+<span class="draw"></span>
+<span class="loss"></span>
+<span class="win"></span>
+<span class="win"></span>
+</div>
+
+${mercados.map(m=>`
+<div>
+<div class="small">${m.nome} ${(m.prob*100).toFixed(0)}%
+${m.prob>=0.70?'<span class="gold">OURO</span>':''}
+</div>
+<div class="bar"><div class="fill" style="width:${m.prob*100}%"></div></div>
+<div class="conf ${nivel(m.prob)}">Confiança ${nivel(m.prob).toUpperCase()}</div>
+</div>
+`).join("")}
+</div>
+`;
+}
+
+document.getElementById("conteudo").innerHTML=html;
+
+rankingLista.sort((a,b)=>b.prob-a.prob);
+document.getElementById("ranking").innerHTML=`
+<div class="ranking">
+<h3>📊 Top 10 Oportunidades</h3>
+${rankingLista.slice(0,10).map(r=>`
+<div class="small">${r.jogo} — ${r.mercado} ${(r.prob*100).toFixed(0)}%</div>
+`).join("")}
+</div>
+`;
+
+let select=document.getElementById("ligaFiltro");
+if(select.options.length===1){
+ligasSet.forEach(l=>{
+let opt=document.createElement("option");
+opt.value=l;
+opt.textContent=l;
+select.appendChild(opt);
+});
+}
+
+mostrarHistorico();
 }
 
 carregar();
 setInterval(carregar,30000);
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
+navigator.serviceWorker.register("service-worker.js");
 }
 
 </script>
-
 </body>
 </html>
