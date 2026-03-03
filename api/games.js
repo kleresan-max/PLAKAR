@@ -6,12 +6,17 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: "API key não configurada." });
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date();
+  const future = new Date();
+  future.setDate(today.getDate() + 3);
+
+  const dateFrom = today.toISOString().split("T")[0];
+  const dateTo = future.toISOString().split("T")[0];
 
   try {
 
     const response = await fetch(
-      `https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${today}`,
+      `https://api.football-data.org/v4/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`,
       {
         headers: {
           "X-Auth-Token": API_KEY
@@ -25,7 +30,8 @@ export default async function handler(req, res) {
       home: match.homeTeam.name,
       away: match.awayTeam.name,
       competition: match.competition.name,
-      status: match.status
+      status: match.status,
+      utcDate: match.utcDate
     }));
 
     return res.status(200).json(jogos);
