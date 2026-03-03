@@ -8,16 +8,61 @@
 <link rel="manifest" href="manifest.json">
 
 <style>
-
 body{
   margin:0;
   font-family:Inter, Arial;
   background:#0f172a;
   color:white;
-  padding-bottom:70px;
 }
 
-/* HEADER */
+/* LOGIN */
+.login-screen{
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  background:#0f172a;
+}
+
+.login-box{
+  background:#1e293b;
+  padding:30px;
+  border-radius:10px;
+  width:300px;
+  text-align:center;
+}
+
+input{
+  width:100%;
+  padding:8px;
+  margin-top:10px;
+  border-radius:6px;
+  border:none;
+}
+
+button{
+  margin-top:15px;
+  padding:8px;
+  width:100%;
+  border:none;
+  border-radius:6px;
+  background:#22c55e;
+  color:white;
+  cursor:pointer;
+}
+
+#error{
+  color:#ef4444;
+  font-size:12px;
+  margin-top:10px;
+}
+
+/* APP */
+#app{
+  display:none;
+}
+
 header{
   padding:15px;
   text-align:center;
@@ -26,228 +71,62 @@ header{
   background:#111827;
 }
 
-/* FILTRO */
-.filter{
-  padding:10px;
-  text-align:center;
-}
-
-select{
-  padding:6px 10px;
-  border-radius:6px;
-  border:none;
-}
-
-/* CARD */
 .card{
   background:#1e293b;
-  margin:10px 15px;
+  margin:15px;
   padding:15px;
   border-radius:10px;
-  animation:fadeIn 0.5s ease forwards;
-  opacity:0;
-}
-
-@keyframes fadeIn{
-  to{opacity:1;}
-}
-
-/* LIGA */
-.league{
-  font-size:12px;
-  color:#94a3b8;
-  margin-bottom:8px;
-}
-
-/* MATCH */
-.match{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:10px;
-}
-
-.team{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  width:40%;
-}
-
-.team img{
-  width:24px;
-}
-
-.score{
-  font-size:18px;
-  font-weight:bold;
-}
-
-.live{
-  background:#ef4444;
-  padding:3px 6px;
-  border-radius:6px;
-  font-size:10px;
-  animation:pulse 1s infinite;
-}
-
-@keyframes pulse{
-  0%{opacity:1;}
-  50%{opacity:0.5;}
-  100%{opacity:1;}
-}
-
-/* ODDS TABLE */
-.odds{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:5px;
-  text-align:center;
-  margin-top:10px;
-}
-
-.odds div{
-  background:#0f172a;
-  padding:6px;
-  border-radius:6px;
-  font-size:13px;
-}
-
-.strong{ color:#22c55e; }
-.medium{ color:#facc15; }
-.neutral{ color:#cbd5e1; }
-
-/* BOTTOM NAV */
-.bottom-nav{
-  position:fixed;
-  bottom:0;
-  width:100%;
-  background:#111827;
-  display:flex;
-  justify-content:space-around;
-  padding:10px 0;
-  border-top:1px solid rgba(255,255,255,0.1);
-}
-
-.bottom-nav button{
-  background:none;
-  border:none;
-  color:white;
-  font-size:12px;
-}
-
-.bottom-nav button.active{
-  color:#22c55e;
 }
 
 </style>
 </head>
 <body>
 
-<header>⚡ KLERIN ANÁLISES AI</header>
-
-<div class="filter">
-<select id="ligaFiltro" onchange="carregar()">
-<option value="">Todas as Ligas</option>
-</select>
+<!-- LOGIN -->
+<div id="login" class="login-screen">
+  <div class="login-box">
+    <h2>🔐 KLERIN ANÁLISES AI</h2>
+    <input type="password" id="senha" placeholder="Digite sua senha">
+    <button onclick="entrar()">Entrar</button>
+    <div id="error"></div>
+  </div>
 </div>
 
-<div id="conteudo"></div>
-
-<div class="bottom-nav">
-<button onclick="trocar('radar')" class="active">Radar</button>
-<button onclick="trocar('ouro')">Ouro</button>
-<button onclick="trocar('live')">Ao Vivo</button>
+<!-- APP -->
+<div id="app">
+  <header>⚡ KLERIN ANÁLISES AI</header>
+  <div class="card">
+    Sistema protegido. Acesso autorizado.
+  </div>
 </div>
 
 <script>
 
-let modo="radar";
+/* SENHA PRIVADA */
+const senhaCorreta = "KLERIN2025";
 
-function trocar(m){
-  modo=m;
-  document.querySelectorAll(".bottom-nav button").forEach(b=>b.classList.remove("active"));
-  event.target.classList.add("active");
-  carregar();
-}
-
-function classe(prob){
-  if(prob>=0.70) return "strong";
-  if(prob>=0.60) return "medium";
-  return "neutral";
-}
-
-async function carregar(){
-
-  const res = await fetch("/api/games");
-  const jogos = await res.json();
-  const filtro = document.getElementById("ligaFiltro").value;
-
-  let html="";
-  let ligasSet = new Set();
-
-  for(const jogo of jogos){
-
-    ligasSet.add(jogo.competition);
-
-    if(filtro && jogo.competition!==filtro) continue;
-
-    const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
-    const data = await r.json();
-
-    const temOuro = [data.probCasa,data.probFora,data.over25,data.btts].some(p=>p>=0.70);
-
-    if(modo==="ouro" && !temOuro) continue;
-    if(modo==="live" && jogo.status!=="LIVE") continue;
-
-    const homeCrest = `https://crests.football-data.org/${jogo.homeId}.svg`;
-    const awayCrest = `https://crests.football-data.org/${jogo.awayId}.svg`;
-
-    html+=`
-    <div class="card">
-      <div class="league">${jogo.competition} ${jogo.status==="LIVE"?'<span class="live">LIVE</span>':''}</div>
-
-      <div class="match">
-        <div class="team">
-          <img src="${homeCrest}">
-          ${jogo.home}
-        </div>
-
-        <div class="score">${jogo.homeGoals??"-"} x ${jogo.awayGoals??"-"}</div>
-
-        <div class="team" style="justify-content:flex-end;">
-          ${jogo.away}
-          <img src="${awayCrest}">
-        </div>
-      </div>
-
-      <div class="odds">
-        <div class="${classe(data.probCasa)}">Casa ${(data.probCasa*100).toFixed(0)}%</div>
-        <div class="${classe(data.probFora)}">Fora ${(data.probFora*100).toFixed(0)}%</div>
-        <div class="${classe(data.over25)}">Over ${(data.over25*100).toFixed(0)}%</div>
-        <div class="${classe(data.btts)}">BTTS ${(data.btts*100).toFixed(0)}%</div>
-      </div>
-    </div>
-    `;
-  }
-
-  document.getElementById("conteudo").innerHTML = html;
-
-  // preencher filtro
-  const select=document.getElementById("ligaFiltro");
-  if(select.options.length===1){
-    ligasSet.forEach(l=>{
-      const opt=document.createElement("option");
-      opt.value=l;
-      opt.textContent=l;
-      select.appendChild(opt);
-    });
+/* LOGIN */
+function entrar(){
+  const senha = document.getElementById("senha").value;
+  if(senha === senhaCorreta){
+    localStorage.setItem("autorizado","sim");
+    liberar();
+  } else {
+    document.getElementById("error").innerText="Senha incorreta";
   }
 }
 
-carregar();
-setInterval(carregar,600000);
+function liberar(){
+  document.getElementById("login").style.display="none";
+  document.getElementById("app").style.display="block";
+}
 
+/* Verifica se já está logado */
+if(localStorage.getItem("autorizado")==="sim"){
+  liberar();
+}
+
+/* PWA */
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
 }
