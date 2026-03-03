@@ -17,11 +17,7 @@ export default async function handler(req, res) {
 
     const response = await fetch(
       `https://api.football-data.org/v4/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`,
-      {
-        headers: {
-          "X-Auth-Token": API_KEY
-        }
-      }
+      { headers: { "X-Auth-Token": API_KEY } }
     );
 
     const data = await response.json();
@@ -29,9 +25,10 @@ export default async function handler(req, res) {
     const jogos = data.matches.map(match => ({
       home: match.homeTeam.name,
       away: match.awayTeam.name,
+      homeId: match.homeTeam.id,
+      awayId: match.awayTeam.id,
       competition: match.competition.name,
-      status: match.status,
-      utcDate: match.utcDate
+      status: match.status
     }));
 
     return res.status(200).json(jogos);
