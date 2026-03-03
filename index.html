@@ -17,6 +17,8 @@
   --gold2:#d4a017;
   --silver1:#d1d5db;
   --silver2:#9ca3af;
+  --red1:#ff4d4d;
+  --red2:#b91c1c;
 }
 
 body{
@@ -41,27 +43,37 @@ header{
 
 .buttons{
   display:flex;
-  gap:12px;
+  gap:10px;
+}
+
+button{
+  padding:9px 16px;
+  border:none;
+  border-radius:25px;
+  font-weight:bold;
+  cursor:pointer;
 }
 
 .gold-btn{
   background:linear-gradient(135deg,var(--gold1),var(--gold2));
   color:#111;
-  padding:10px 18px;
-  border:none;
-  border-radius:25px;
-  font-weight:bold;
-  cursor:pointer;
 }
 
 .silver-btn{
   background:linear-gradient(135deg,var(--silver1),var(--silver2));
   color:#111;
-  padding:10px 18px;
-  border:none;
-  border-radius:25px;
-  font-weight:bold;
-  cursor:pointer;
+}
+
+.ultra-btn{
+  background:linear-gradient(135deg,var(--red1),var(--red2));
+  color:white;
+  animation:pulse 1.5s infinite;
+}
+
+@keyframes pulse{
+  0%{box-shadow:0 0 5px rgba(255,0,0,0.4);}
+  50%{box-shadow:0 0 20px rgba(255,0,0,1);}
+  100%{box-shadow:0 0 5px rgba(255,0,0,0.4);}
 }
 
 .container{
@@ -151,16 +163,15 @@ header{
 <header>
   <div class="brand">Plakar Analytics</div>
   <div class="buttons">
-    <button class="gold-btn" onclick="abrirPremium()">🔥 Premium 70%+</button>
-    <button class="silver-btn" onclick="abrirMedio()">⚡ Nível Médio</button>
+    <button class="gold-btn" onclick="filtrar('premium')">🔥 70%+</button>
+    <button class="silver-btn" onclick="filtrar('medio')">⚡ 50-69%</button>
+    <button class="ultra-btn" onclick="filtrar('ultra')">🚨 80%+</button>
   </div>
 </header>
 
 <div class="container">
-
   <div id="games">Carregando...</div>
   <div class="result-panel" id="analysis"></div>
-
 </div>
 
 <div class="drawer" id="rankingDrawer">
@@ -175,8 +186,8 @@ let rankingData=[];
 
 async function carregarJogos(){
 
-  const res = await fetch("/api/games");
-  const jogos = await res.json();
+  const res=await fetch("/api/games");
+  const jogos=await res.json();
   const div=document.getElementById("games");
   div.innerHTML="";
   rankingData=[];
@@ -207,40 +218,40 @@ async function carregarJogos(){
   });
 }
 
-function abrirPremium(){
-  filtrarRanking("premium");
-}
+function filtrar(tipo){
 
-function abrirMedio(){
-  filtrarRanking("medio");
-}
+  let filtrado=[];
+  let titulo="";
 
-function filtrarRanking(tipo){
-
-  let filtrado;
+  if(tipo==="ultra"){
+    titulo="🚨 ALERTA MÁXIMO (80%+)";
+    filtrado=rankingData.filter(j =>
+      j.probCasa>=0.80 || j.probFora>=0.80 || j.over>=0.80 || j.btts>=0.80
+    );
+  }
 
   if(tipo==="premium"){
-    document.getElementById("rankingTitle").innerText="🔥 Oportunidades Premium (70%+)";
-    filtrado = rankingData.filter(j =>
-      j.probCasa >= 0.70 ||
-      j.probFora >= 0.70 ||
-      j.over >= 0.70 ||
-      j.btts >= 0.70
+    titulo="🔥 Oportunidades Premium (70%+)";
+    filtrado=rankingData.filter(j =>
+      j.probCasa>=0.70 || j.probFora>=0.70 || j.over>=0.70 || j.btts>=0.70
     );
-  } else {
-    document.getElementById("rankingTitle").innerText="⚡ Oportunidades Nível Médio (50% - 69%)";
-    filtrado = rankingData.filter(j =>
-      (j.probCasa >= 0.50 && j.probCasa < 0.70) ||
-      (j.probFora >= 0.50 && j.probFora < 0.70) ||
-      (j.over >= 0.50 && j.over < 0.70) ||
-      (j.btts >= 0.50 && j.btts < 0.70)
+  }
+
+  if(tipo==="medio"){
+    titulo="⚡ Nível Médio (50-69%)";
+    filtrado=rankingData.filter(j =>
+      (j.probCasa>=0.50 && j.probCasa<0.70) ||
+      (j.probFora>=0.50 && j.probFora<0.70) ||
+      (j.over>=0.50 && j.over<0.70) ||
+      (j.btts>=0.50 && j.btts<0.70)
     );
   }
 
   const div=document.getElementById("rankingContent");
+  document.getElementById("rankingTitle").innerText=titulo;
 
   if(filtrado.length===0){
-    div.innerHTML=`<div class="rank-card">Nenhuma oportunidade encontrada.</div>`;
+    div.innerHTML="<div class='rank-card'>Nenhuma oportunidade encontrada.</div>";
   } else {
     div.innerHTML=filtrado.map(j=>`
       <div class="rank-card">
@@ -278,37 +289,27 @@ async function analisar(homeId,awayId,home,away){
   document.getElementById("analysis").innerHTML=`
     <h2>${data.home} vs ${data.away}</h2>
 
-    <div class="metric">
-      Casa ${(data.probCasa*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="bar1"></div></div>
-    </div>
+    <div class="metric">Casa ${(data.probCasa*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="b1"></div></div></div>
 
-    <div class="metric">
-      Empate ${(data.probEmpate*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="bar2"></div></div>
-    </div>
+    <div class="metric">Empate ${(data.probEmpate*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="b2"></div></div></div>
 
-    <div class="metric">
-      Fora ${(data.probFora*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="bar3"></div></div>
-    </div>
+    <div class="metric">Fora ${(data.probFora*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="b3"></div></div></div>
 
-    <div class="metric">
-      Over 2.5 ${(data.over25*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="bar4"></div></div>
-    </div>
+    <div class="metric">Over ${(data.over25*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="b4"></div></div></div>
 
-    <div class="metric">
-      BTTS ${(data.btts*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="bar5"></div></div>
-    </div>
+    <div class="metric">BTTS ${(data.btts*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="b5"></div></div></div>
   `;
 
-  bar((data.probCasa*100).toFixed(2),"bar1");
-  bar((data.probEmpate*100).toFixed(2),"bar2");
-  bar((data.probFora*100).toFixed(2),"bar3");
-  bar((data.over25*100).toFixed(2),"bar4");
-  bar((data.btts*100).toFixed(2),"bar5");
+  bar((data.probCasa*100).toFixed(2),"b1");
+  bar((data.probEmpate*100).toFixed(2),"b2");
+  bar((data.probFora*100).toFixed(2),"b3");
+  bar((data.over25*100).toFixed(2),"b4");
+  bar((data.btts*100).toFixed(2),"b5");
 }
 
 carregarJogos();
