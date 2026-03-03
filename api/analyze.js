@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   try {
 
-    async function pegarUltimosJogos(teamId) {
+    async function pegarJogos(teamId) {
       const response = await fetch(
         `https://api.football-data.org/v4/teams/${teamId}/matches?status=FINISHED&limit=10`,
         { headers: { "X-Auth-Token": API_KEY } }
@@ -19,36 +19,63 @@ export default async function handler(req, res) {
       return data.matches || [];
     }
 
-    function calcularMedia(jogos, teamId) {
-      if (jogos.length === 0) return { marcados: 1, sofridos: 1 };
+    function calcularStats(jogos, teamId, isHomeTeam) {
 
-      let marcados = 0;
-      let sofridos = 0;
+      if (jogos.length === 0) {
+        return { marcados: 1, sofridos: 1 };
+      }
 
-      jogos.forEach(jogo => {
+      let marcadosRecentes = 0;
+      let sofridosRecentes = 0;
+      let marcadosAntigos = 0;
+      let sofridosAntigos = 0;
+
+      jogos.forEach((jogo, index) => {
+
+        let marcou = 0;
+        let sofreu = 0;
+
         if (jogo.homeTeam.id == teamId) {
-          marcados += jogo.score.fullTime.home ?? 0;
-          sofridos += jogo.score.fullTime.away ?? 0;
+          marcou = jogo.score.fullTime.home ?? 0;
+          sofreu = jogo.score.fullTime.away ?? 0;
         } else {
-          marcados += jogo.score.fullTime.away ?? 0;
-          sofridos += jogo.score.fullTime.home ?? 0;
+          marcou = jogo.score.fullTime.away ?? 0;
+          sofreu = jogo.score.fullTime.home ?? 0;
         }
+
+        if (index < 5) {
+          marcadosRecentes += marcou;
+          sofridosRecentes += sofreu;
+        } else {
+          marcadosAntigos += marcou;
+          sofridosAntigos += sofreu;
+        }
+
       });
 
+      const mediaRecente = (marcadosRecentes / 5);
+      const mediaAntiga = (marcadosAntigos / 5);
+
+      const sofridoRecente = (sofridosRecentes / 5);
+      const sofridoAntigo = (sofridosAntigos / 5);
+
       return {
-        marcados: marcados / jogos.length,
-        sofridos: sofridos / jogos.length
+        marcados: (mediaRecente * 0.6) + (mediaAntiga * 0.4),
+        sofridos: (sofridoRecente * 0.6) + (sofridoAntigo * 0.4)
       };
     }
 
-    const jogosHome = await pegarUltimosJogos(homeId);
-    const jogosAway = await pegarUltimosJogos(awayId);
+    const jogosHome = await pegarJogos(homeId);
+    const jogosAway = await pegarJogos(awayId);
 
-    const homeStats = calcularMedia(jogosHome, homeId);
-    const awayStats = calcularMedia(jogosAway, awayId);
+    const homeStats = calcularStats(jogosHome, homeId);
+    const awayStats = calcularStats(jogosAway, awayId);
 
-    const lambdaHome = (homeStats.marcados + awayStats.sofridos) / 2;
-    const lambdaAway = (awayStats.marcados + homeStats.sofridos) / 2;
+    let lambdaHome = (homeStats.marcados + awayStats.sofridos) / 2;
+    let lambdaAway = (awayStats.marcados + homeStats.sofridos) / 2;
+
+    // Fator mando
+    lambdaHome *= 1.10;
 
     function fatorial(n){ return n<=1 ? 1 : n*fatorial(n-1); }
     function poisson(k,lambda){
@@ -56,13 +83,19 @@ export default async function handler(req, res) {
     }
 
     let probCasa=0, probEmpate=0, probFora=0;
+    let over25=0;
+    let btts=0;
 
     for(let i=0;i<=5;i++){
       for(let j=0;j<=5;j++){
         const p=poisson(i,lambdaHome)*poisson(j,lambdaAway);
+
         if(i>j) probCasa+=p;
         if(i===j) probEmpate+=p;
         if(j>i) probFora+=p;
+
+        if(i+j>2) over25+=p;
+        if(i>0 && j>0) btts+=p;
       }
     }
 
@@ -71,7 +104,9 @@ export default async function handler(req, res) {
       away,
       probCasa,
       probEmpate,
-      probFora
+      probFora,
+      over25,
+      btts
     });
 
   } catch (error) {
