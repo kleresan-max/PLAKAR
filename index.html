@@ -11,7 +11,6 @@
   --panel:#111827;
   --card:#1e293b;
   --muted:#94a3b8;
-  --green:#22c55e;
   --gold1:#f5d27a;
   --gold2:#d4a017;
   --silver1:#d1d5db;
@@ -33,6 +32,8 @@ header{
   align-items:center;
   padding:18px 30px;
   background:#0f172a;
+  flex-wrap:wrap;
+  gap:10px;
 }
 
 .brand{
@@ -43,10 +44,11 @@ header{
 .buttons{
   display:flex;
   gap:10px;
+  flex-wrap:wrap;
 }
 
 button{
-  padding:9px 16px;
+  padding:8px 14px;
   border:none;
   border-radius:25px;
   font-weight:bold;
@@ -69,6 +71,11 @@ button{
   animation:pulse 1.5s infinite;
 }
 
+.notify-btn{
+  background:#2563eb;
+  color:white;
+}
+
 @keyframes pulse{
   0%{box-shadow:0 0 5px rgba(255,0,0,0.4);}
   50%{box-shadow:0 0 20px rgba(255,0,0,1);}
@@ -81,11 +88,39 @@ button{
   padding:30px;
 }
 
+.league{
+  margin-bottom:20px;
+  background:#111827;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.league-header{
+  padding:12px 15px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:#1f2937;
+  font-weight:bold;
+}
+
+.flag{
+  width:20px;
+  height:15px;
+  object-fit:cover;
+}
+
+.league-games{
+  display:none;
+  padding:10px;
+}
+
 .game-card{
   background:var(--card);
-  padding:14px 18px;
-  border-radius:10px;
-  margin-bottom:10px;
+  padding:10px 14px;
+  border-radius:8px;
+  margin-bottom:8px;
   display:flex;
   justify-content:space-between;
   cursor:pointer;
@@ -94,12 +129,12 @@ button{
 .result-panel{
   margin-top:30px;
   background:var(--panel);
-  padding:25px;
-  border-radius:14px;
+  padding:20px;
+  border-radius:12px;
 }
 
 .metric{
-  margin:12px 0;
+  margin:10px 0;
 }
 
 .bar-container{
@@ -121,10 +156,10 @@ button{
   position:fixed;
   right:-100%;
   top:0;
-  width:420px;
+  width:400px;
   height:100%;
   background:#111827;
-  padding:25px;
+  padding:20px;
   transition:0.4s;
   overflow:auto;
   z-index:999;
@@ -135,9 +170,9 @@ button{
 
 .rank-card{
   background:#1e293b;
-  padding:12px;
+  padding:10px;
   border-radius:8px;
-  margin-bottom:10px;
+  margin-bottom:8px;
 }
 
 .close-btn{
@@ -150,14 +185,8 @@ button{
   cursor:pointer;
 }
 
-.small{
-  font-size:12px;
-  color:var(--muted);
-}
-
 .counter{
   margin-left:6px;
-  font-weight:bold;
 }
 
 </style>
@@ -166,17 +195,19 @@ button{
 
 <header>
   <div class="brand">Plakar Analytics</div>
+
   <div class="buttons">
     <button class="gold-btn" onclick="filtrar('premium')">🔥 70%+</button>
     <button class="silver-btn" onclick="filtrar('medio')">⚡ 50-69%</button>
-    <button class="ultra-btn" onclick="filtrar('ultra')" id="ultraBtn">
+    <button class="ultra-btn" onclick="filtrar('ultra')">
       🚨 80%+ <span class="counter" id="ultraCount">(0)</span>
     </button>
+    <button class="notify-btn" onclick="ativarNotificacoes()">🔔 Ativar Notificações</button>
   </div>
 </header>
 
 <div class="container">
-  <div id="games">Carregando...</div>
+  <div id="games"></div>
   <div class="result-panel" id="analysis"></div>
 </div>
 
@@ -192,15 +223,25 @@ let rankingData=[];
 
 async function carregarJogos(){
 
-  const res=await fetch("/api/games");
-  const jogos=await res.json();
-  const div=document.getElementById("games");
-  div.innerHTML="";
+  const res = await fetch("/api/games");
+  const jogos = await res.json();
   rankingData=[];
+  const gamesDiv=document.getElementById("games");
+  gamesDiv.innerHTML="";
 
-  const limit=jogos.slice(0,8);
+  const ligas={};
 
-  for(const jogo of limit){
+  for(const jogo of jogos.slice(0,8)){
+
+    if(!ligas[jogo.competition]){
+      ligas[jogo.competition]={
+        country:jogo.country,
+        jogos:[]
+      };
+    }
+
+    ligas[jogo.competition].jogos.push(jogo);
+
     const r=await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
     const data=await r.json();
 
@@ -214,16 +255,39 @@ async function carregarJogos(){
     });
   }
 
-  atualizarContadorUltra();
+  for(const liga in ligas){
 
-  jogos.forEach(jogo=>{
-    div.innerHTML+=`
-      <div class="game-card" onclick="analisar('${jogo.homeId}','${jogo.awayId}','${jogo.home}','${jogo.away}')">
-        ${jogo.home} vs ${jogo.away}
-        <span class="small">${jogo.status}</span>
+    const countryCode = ligas[liga].country?.slice(0,2)?.toLowerCase();
+    const flagUrl = countryCode ? `https://flagcdn.com/24x18/${countryCode}.png` : "";
+
+    const leagueDiv=document.createElement("div");
+    leagueDiv.className="league";
+
+    leagueDiv.innerHTML=`
+      <div class="league-header" onclick="toggleLiga(this)">
+        <img class="flag" src="${flagUrl}">
+        ${liga}
+      </div>
+      <div class="league-games">
+        ${ligas[liga].jogos.map(j=>`
+          <div class="game-card" onclick="analisar('${j.homeId}','${j.awayId}','${j.home}','${j.away}')">
+            ${j.home} vs ${j.away}
+            <span>${j.status}</span>
+          </div>
+        `).join("")}
       </div>
     `;
-  });
+
+    gamesDiv.appendChild(leagueDiv);
+  }
+
+  atualizarContadorUltra();
+  verificarNotificacoes();
+}
+
+function toggleLiga(el){
+  const games=el.nextElementSibling;
+  games.style.display = games.style.display==="block" ? "none" : "block";
 }
 
 function atualizarContadorUltra(){
@@ -231,6 +295,35 @@ function atualizarContadorUltra(){
     j.probCasa>=0.80 || j.probFora>=0.80 || j.over>=0.80 || j.btts>=0.80
   );
   document.getElementById("ultraCount").innerText=`(${ultra.length})`;
+}
+
+function ativarNotificacoes(){
+  if(Notification.permission==="default"){
+    Notification.requestPermission();
+  }
+}
+
+function verificarNotificacoes(){
+
+  if(Notification.permission!=="granted") return;
+
+  const ultra = rankingData.filter(j =>
+    j.probCasa>=0.80 || j.probFora>=0.80 || j.over>=0.80 || j.btts>=0.80
+  );
+
+  const premium = rankingData.filter(j =>
+    j.probCasa>=0.70 || j.probFora>=0.70 || j.over>=0.70 || j.btts>=0.70
+  );
+
+  if(ultra.length>0){
+    new Notification("🚨 ALERTA 80%+",{
+      body:`${ultra.length} oportunidade(s) ultra encontradas hoje.`
+    });
+  } else if(premium.length>0){
+    new Notification("🔥 Oportunidades 70%+",{
+      body:`${premium.length} oportunidade(s) fortes hoje.`
+    });
+  }
 }
 
 function filtrar(tipo){
@@ -271,12 +364,6 @@ function filtrar(tipo){
     div.innerHTML=filtrado.map(j=>`
       <div class="rank-card">
         ${j.home} vs ${j.away}
-        <div class="small">
-          ${j.probCasa>=0.50?`Casa ${(j.probCasa*100).toFixed(2)}%<br>`:''}
-          ${j.probFora>=0.50?`Fora ${(j.probFora*100).toFixed(2)}%<br>`:''}
-          ${j.over>=0.50?`Over ${(j.over*100).toFixed(2)}%<br>`:''}
-          ${j.btts>=0.50?`BTTS ${(j.btts*100).toFixed(2)}%<br>`:''}
-        </div>
       </div>
     `).join("");
   }
@@ -296,35 +383,22 @@ async function analisar(homeId,awayId,home,away){
   const data=await res.json();
 
   function bar(percent,id){
-    setTimeout(()=>{
-      document.getElementById(id).style.width=percent+"%";
-    },100);
+    setTimeout(()=>{document.getElementById(id).style.width=percent+"%";},100);
   }
 
   document.getElementById("analysis").innerHTML=`
     <h2>${data.home} vs ${data.away}</h2>
-
-    <div class="metric">Casa ${(data.probCasa*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="b1"></div></div></div>
-
-    <div class="metric">Empate ${(data.probEmpate*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="b2"></div></div></div>
-
-    <div class="metric">Fora ${(data.probFora*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="b3"></div></div></div>
-
-    <div class="metric">Over ${(data.over25*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="b4"></div></div></div>
-
-    <div class="metric">BTTS ${(data.btts*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="b5"></div></div></div>
+    ${["probCasa","probEmpate","probFora","over25","btts"].map((k,i)=>`
+      <div class="metric">${k.replace("prob","").replace("over25","Over").replace("btts","BTTS")} ${(data[k]*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="b${i}"></div></div></div>
+    `).join("")}
   `;
 
-  bar((data.probCasa*100).toFixed(2),"b1");
-  bar((data.probEmpate*100).toFixed(2),"b2");
-  bar((data.probFora*100).toFixed(2),"b3");
-  bar((data.over25*100).toFixed(2),"b4");
-  bar((data.btts*100).toFixed(2),"b5");
+  bar(data.probCasa*100,"b0");
+  bar(data.probEmpate*100,"b1");
+  bar(data.probFora*100,"b2");
+  bar(data.over25*100,"b3");
+  bar(data.btts*100,"b4");
 }
 
 carregarJogos();
