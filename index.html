@@ -10,7 +10,6 @@
 
 <style>
 *{box-sizing:border-box}
-
 body{
   margin:0;
   font-family:'Manrope',sans-serif;
@@ -23,8 +22,7 @@ header{
   padding:18px;
   text-align:center;
   font-weight:800;
-  font-size:20px;
-  letter-spacing:1px;
+  font-size:18px;
 }
 
 /* BOTÕES */
@@ -35,42 +33,29 @@ header{
   flex-wrap:wrap;
   margin-bottom:15px;
 }
-
 .top button{
   padding:6px 14px;
   border-radius:20px;
   border:none;
-  font-size:12px;
+  font-size:11px;
   cursor:pointer;
   background:#1e293b;
   color:#94a3b8;
-  transition:.3s;
 }
-
 .top .active{
   background:#22c55e;
   color:white;
 }
 
-/* PLATAFORMA FLUTUANTE */
+/* PLATAFORMA */
 .wrapper{
   max-width:1100px;
   margin:20px auto;
   padding:20px;
-  background:rgba(17,24,39,0.8);
-  backdrop-filter:blur(15px);
-  border-radius:20px;
+  background:rgba(17,24,39,0.85);
+  backdrop-filter:blur(12px);
+  border-radius:18px;
   box-shadow:0 20px 60px rgba(0,0,0,0.5);
-}
-
-/* LIGA */
-.league{
-  margin-top:25px;
-  font-size:13px;
-  font-weight:700;
-  color:#22c55e;
-  border-bottom:1px solid rgba(255,255,255,0.1);
-  padding-bottom:4px;
 }
 
 /* CARD */
@@ -79,54 +64,74 @@ header{
   padding:12px;
   background:#1e293b;
   border-radius:12px;
+  font-size:11px;
+}
+
+.match{
   display:flex;
   justify-content:space-between;
   align-items:center;
-  font-size:12px;
 }
-
 .team{
   display:flex;
   align-items:center;
   gap:6px;
   width:40%;
 }
-
 .team img{width:22px;height:22px}
+.score{font-weight:800}
 
-.score{
-  font-weight:800;
-  font-size:14px;
+.live{
+  background:#ef4444;
+  padding:2px 6px;
+  border-radius:6px;
+  font-size:9px;
+  animation:pulse 1s infinite;
+}
+@keyframes pulse{0%{opacity:1}50%{opacity:.4}100%{opacity:1}}
+
+.bar{
+  height:5px;
+  background:#0f172a;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:3px;
+}
+.fill{
+  height:100%;
+  background:#22c55e;
 }
 
-.rank{
-  font-weight:700;
-  color:#22c55e;
-  width:25px;
-}
+.alta{color:#22c55e}
+.media{color:#facc15}
+.baixa{color:#ef4444}
 
 .gold{
   background:#d4af37;
   color:black;
-  padding:2px 6px;
-  border-radius:6px;
-  font-size:10px;
+  padding:2px 5px;
+  border-radius:5px;
+  font-size:9px;
 }
 
 .ranking{
-  margin-bottom:20px;
-  padding:15px;
   background:#111827;
+  padding:10px;
   border-radius:12px;
+  margin-bottom:15px;
 }
+.small{font-size:10px;color:#94a3b8}
 
-.small{font-size:11px;color:#94a3b8}
-
-@media(max-width:600px){
-  .card{flex-direction:column;align-items:flex-start}
-  .team{width:100%}
-  .score{margin:6px 0}
+.forma span{
+  display:inline-block;
+  width:8px;height:8px;
+  border-radius:50%;
+  margin-right:3px;
 }
+.win{background:#22c55e}
+.draw{background:#facc15}
+.loss{background:#ef4444}
+
 </style>
 </head>
 <body>
@@ -134,15 +139,17 @@ header{
 <header>⚡ KLERIN ANÁLISES AI</header>
 
 <div class="top">
-<button onclick="mudar('radar')" class="active" id="radarBtn">Radar</button>
-<button onclick="mudar('ouro')" id="ouroBtn">Ouro</button>
-<button onclick="mudar('ligas')" id="ligasBtn">Ligas</button>
+<button onclick="modo='radar';carregar()" class="active" id="radarBtn">Radar</button>
+<button onclick="modo='ouro';carregar()" id="ouroBtn">Ouro</button>
+<button onclick="modo='prata';carregar()" id="prataBtn">Prata</button>
+<button onclick="modo='ligas';carregar()" id="ligasBtn">Ligas</button>
 </div>
 
 <div class="wrapper">
 
 <div id="ranking"></div>
 <div id="conteudo"></div>
+<div id="historico"></div>
 
 </div>
 
@@ -150,11 +157,23 @@ header{
 
 let modo="radar";
 
-function mudar(n){
-modo=n;
-document.querySelectorAll(".top button").forEach(b=>b.classList.remove("active"));
-document.getElementById(n+"Btn").classList.add("active");
-carregar();
+function nivel(p){
+if(p>=0.70)return"alta";
+if(p>=0.60)return"media";
+return"baixa";
+}
+
+function mostrarHistorico(){
+let hist=JSON.parse(localStorage.getItem("historico")||"[]");
+let acertos=hist.filter(h=>h.resultado==="acerto").length;
+let total=hist.length;
+let taxa=total?((acertos/total)*100).toFixed(1):0;
+document.getElementById("historico").innerHTML=`
+<div class="ranking">
+<h3>💎 Histórico</h3>
+<div class="small">Total: ${total} | Acertos: ${acertos} | Taxa: ${taxa}%</div>
+</div>
+`;
 }
 
 async function carregar(){
@@ -183,15 +202,15 @@ jogo:jogo.home+" vs "+jogo.away,
 prob:m.prob
 }));
 
-if(!ligas[jogo.competition]) ligas[jogo.competition]=[];
-ligas[jogo.competition].push({jogo,data});
+if(!ligas[jogo.competition])ligas[jogo.competition]=[];
+ligas[jogo.competition].push({jogo,mercados});
 }
 
-/* RANKING TOP 20 */
 rankingLista.sort((a,b)=>b.prob-a.prob);
+
 document.getElementById("ranking").innerHTML=`
 <div class="ranking">
-<h3>🏆 Top 20 Oportunidades</h3>
+<h3>🏆 Top 20</h3>
 ${rankingLista.slice(0,20).map((r,i)=>`
 <div class="small">${i+1}º - ${r.jogo} ${(r.prob*100).toFixed(0)}%</div>
 `).join("")}
@@ -199,46 +218,68 @@ ${rankingLista.slice(0,20).map((r,i)=>`
 `;
 
 if(modo==="ligas"){
-
 for(const liga in ligas){
-
-html+=`<div class="league">${liga}</div>`;
-
+html+=`<div class="small" style="margin-top:10px;font-weight:700;color:#22c55e">${liga}</div>`;
 ligas[liga].forEach(item=>{
-html+=`
-<div class="card">
-<div class="team">
-<img src="${item.jogo.homeCrest}">
-${item.jogo.home}
-</div>
-
-<div class="score">- x -</div>
-
-<div class="team" style="justify-content:flex-end;">
-${item.jogo.away}
-<img src="${item.jogo.awayCrest}">
-</div>
-</div>
-`;
+html+=renderCard(item.jogo,item.mercados);
 });
 }
-
 }else{
-
 rankingLista.slice(0,20).forEach((r,i)=>{
-html+=`
-<div class="card">
-<div class="rank">${i+1}º</div>
-<div>${r.jogo}</div>
-<div>${(r.prob*100).toFixed(0)}%
-${r.prob>=0.70?'<span class="gold">OURO</span>':''}
-</div>
-</div>
-`;
+let jogo=ligas[Object.keys(ligas)[0]].find(j=>j.jogo.home+" vs "+j.jogo.away===r.jogo);
 });
+for(const liga in ligas){
+ligas[liga].forEach(item=>{
+if(modo==="ouro" && !item.mercados.some(m=>m.prob>=0.70))return;
+if(modo==="prata" && !item.mercados.some(m=>m.prob>=0.60 && m.prob<0.70))return;
+html+=renderCard(item.jogo,item.mercados);
+});
+}
 }
 
 document.getElementById("conteudo").innerHTML=html;
+mostrarHistorico();
+}
+
+function renderCard(jogo,mercados){
+return `
+<div class="card">
+<div class="match">
+<div class="team">
+<img src="${jogo.homeCrest}">
+${jogo.home}
+</div>
+
+<div class="score">
+- x -
+${jogo.status==="LIVE"?'<span class="live">LIVE</span>':''}
+</div>
+
+<div class="team" style="justify-content:flex-end;">
+${jogo.away}
+<img src="${jogo.awayCrest}">
+</div>
+</div>
+
+<div class="forma small">Forma:
+<span class="win"></span>
+<span class="draw"></span>
+<span class="loss"></span>
+<span class="win"></span>
+<span class="win"></span>
+</div>
+
+${mercados.map(m=>`
+<div class="small">
+${m.nome} ${(m.prob*100).toFixed(0)}%
+${m.prob>=0.70?'<span class="gold">OURO</span>':''}
+</div>
+<div class="bar"><div class="fill" style="width:${m.prob*100}%"></div></div>
+<div class="${nivel(m.prob)} small">Confiança ${nivel(m.prob).toUpperCase()}</div>
+`).join("")}
+
+</div>
+`;
 }
 
 carregar();
@@ -249,6 +290,5 @@ navigator.serviceWorker.register("service-worker.js");
 }
 
 </script>
-
 </body>
 </html>
