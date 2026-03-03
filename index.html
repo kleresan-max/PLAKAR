@@ -46,6 +46,56 @@ async function analisar(home,away){
 
   document.getElementById("analise").innerHTML = `
     <h3>${data.home} vs ${data.away}</h3>
+
+    <strong>Probabilidades:</strong><br>
+    Casa: ${(data.probCasa*100).toFixed(2)}%<br>
+    Empate: ${(data.probEmpate*100).toFixed(2)}%<br>
+    Fora: ${(data.probFora*100).toFixed(2)}%<br><br>
+
+    <strong>Inserir Odds:</strong><br>
+    <input type="number" id="oddCasa" placeholder="Odd Casa" step="0.01"><br>
+    <input type="number" id="oddEmpate" placeholder="Odd Empate" step="0.01"><br>
+    <input type="number" id="oddFora" placeholder="Odd Fora" step="0.01"><br><br>
+
+    <button onclick="calcularEV(${data.probCasa},${data.probEmpate},${data.probFora})">
+      Calcular EV
+    </button>
+
+    <div id="evResultado" style="margin-top:15px;"></div>
+  `;
+}function calcularEV(probCasa,probEmpate,probFora){
+
+  const oddCasa = parseFloat(document.getElementById("oddCasa").value);
+  const oddEmpate = parseFloat(document.getElementById("oddEmpate").value);
+  const oddFora = parseFloat(document.getElementById("oddFora").value);
+
+  if(isNaN(oddCasa)||isNaN(oddEmpate)||isNaN(oddFora)){
+    document.getElementById("evResultado").innerHTML="Preencha todas as odds.";
+    return;
+  }
+
+  const evCasa = (probCasa*oddCasa)-1;
+  const evEmpate = (probEmpate*oddEmpate)-1;
+  const evFora = (probFora*oddFora)-1;
+
+  function cor(ev){
+    return ev>0 ? "lime" : "red";
+  }
+
+  document.getElementById("evResultado").innerHTML=`
+    <strong>Valor Esperado:</strong><br>
+    Casa: <span style="color:${cor(evCasa)}">${(evCasa*100).toFixed(2)}%</span><br>
+    Empate: <span style="color:${cor(evEmpate)}">${(evEmpate*100).toFixed(2)}%</span><br>
+    Fora: <span style="color:${cor(evFora)}">${(evFora*100).toFixed(2)}%</span>
+  `;
+}
+  document.getElementById("analise").innerHTML="Analisando...";
+
+  const res = await fetch(`/api/analyze?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
+  const data = await res.json();
+
+  document.getElementById("analise").innerHTML = `
+    <h3>${data.home} vs ${data.away}</h3>
     Vitória Casa: ${(data.probCasa*100).toFixed(2)}%<br>
     Empate: ${(data.probEmpate*100).toFixed(2)}%<br>
     Vitória Fora: ${(data.probFora*100).toFixed(2)}%
