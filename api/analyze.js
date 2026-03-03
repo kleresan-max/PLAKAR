@@ -1,63 +1,54 @@
 export default async function handler(req, res) {
 
   const API_KEY = process.env.FOOTBALL_API_KEY;
+  const { homeId, awayId, home, away } = req.query;
 
   if (!API_KEY) {
     return res.status(500).json({ error: "API key não configurada." });
   }
 
-  const { home, away } = req.query;
-
-  if (!home || !away) {
-    return res.status(400).json({ error: "Times não informados." });
-  }
-
   try {
 
-    const response = await fetch(
-      `https://api.football-data.org/v4/matches?status=FINISHED`,
-      {
-        headers: { "X-Auth-Token": API_KEY }
-      }
-    );
+    async function pegarUltimosJogos(teamId) {
+      const response = await fetch(
+        `https://api.football-data.org/v4/teams/${teamId}/matches?status=FINISHED&limit=10`,
+        { headers: { "X-Auth-Token": API_KEY } }
+      );
 
-    const data = await response.json();
-    const matches = data.matches || [];
+      const data = await response.json();
+      return data.matches || [];
+    }
 
-    function calcularMedia(time) {
+    function calcularMedia(jogos, teamId) {
+      if (jogos.length === 0) return { marcados: 1, sofridos: 1 };
 
-      const jogos = matches.filter(m =>
-        m.homeTeam?.name === time || m.awayTeam?.name === time
-      ).slice(0,10);
-
-      if (jogos.length === 0) {
-        return { mediaMarcados: 1, mediaSofridos: 1 };
-      }
-
-      let golsMarcados = 0;
-      let golsSofridos = 0;
+      let marcados = 0;
+      let sofridos = 0;
 
       jogos.forEach(jogo => {
-        if (jogo.homeTeam.name === time) {
-          golsMarcados += jogo.score.fullTime.home ?? 0;
-          golsSofridos += jogo.score.fullTime.away ?? 0;
+        if (jogo.homeTeam.id == teamId) {
+          marcados += jogo.score.fullTime.home ?? 0;
+          sofridos += jogo.score.fullTime.away ?? 0;
         } else {
-          golsMarcados += jogo.score.fullTime.away ?? 0;
-          golsSofridos += jogo.score.fullTime.home ?? 0;
+          marcados += jogo.score.fullTime.away ?? 0;
+          sofridos += jogo.score.fullTime.home ?? 0;
         }
       });
 
       return {
-        mediaMarcados: golsMarcados / jogos.length,
-        mediaSofridos: golsSofridos / jogos.length
+        marcados: marcados / jogos.length,
+        sofridos: sofridos / jogos.length
       };
     }
 
-    const homeStats = calcularMedia(home);
-    const awayStats = calcularMedia(away);
+    const jogosHome = await pegarUltimosJogos(homeId);
+    const jogosAway = await pegarUltimosJogos(awayId);
 
-    const lambdaHome = (homeStats.mediaMarcados + awayStats.mediaSofridos) / 2;
-    const lambdaAway = (awayStats.mediaMarcados + homeStats.mediaSofridos) / 2;
+    const homeStats = calcularMedia(jogosHome, homeId);
+    const awayStats = calcularMedia(jogosAway, awayId);
+
+    const lambdaHome = (homeStats.marcados + awayStats.sofridos) / 2;
+    const lambdaAway = (awayStats.marcados + homeStats.sofridos) / 2;
 
     function fatorial(n){ return n<=1 ? 1 : n*fatorial(n-1); }
     function poisson(k,lambda){
