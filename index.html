@@ -2,191 +2,54 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Plakar Analytics</title>
+<title>Plakar Radar Profissional</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 
-:root{
-  --bg:#0b1220;
-  --panel:#111827;
-  --card:#1e293b;
-  --muted:#94a3b8;
-  --gold1:#f5d27a;
-  --gold2:#d4a017;
-  --silver1:#d1d5db;
-  --silver2:#9ca3af;
-  --red1:#ff4d4d;
-  --red2:#b91c1c;
-}
-
 body{
   margin:0;
-  background:linear-gradient(180deg,#0b1220,#0f172a);
+  background:#0f172a;
   font-family:Arial;
   color:white;
 }
 
 header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:18px 30px;
-  background:#0f172a;
-  flex-wrap:wrap;
-  gap:10px;
-}
-
-.brand{
+  padding:20px;
+  background:#111827;
   font-size:20px;
   font-weight:bold;
 }
 
-.buttons{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-button{
-  padding:8px 14px;
-  border:none;
-  border-radius:25px;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-.gold-btn{
-  background:linear-gradient(135deg,var(--gold1),var(--gold2));
-  color:#111;
-}
-
-.silver-btn{
-  background:linear-gradient(135deg,var(--silver1),var(--silver2));
-  color:#111;
-}
-
-.ultra-btn{
-  background:linear-gradient(135deg,var(--red1),var(--red2));
-  color:white;
-  animation:pulse 1.5s infinite;
-}
-
-.notify-btn{
-  background:#2563eb;
-  color:white;
-}
-
-@keyframes pulse{
-  0%{box-shadow:0 0 5px rgba(255,0,0,0.4);}
-  50%{box-shadow:0 0 20px rgba(255,0,0,1);}
-  100%{box-shadow:0 0 5px rgba(255,0,0,0.4);}
-}
-
 .container{
-  max-width:1100px;
+  padding:25px;
+  max-width:1200px;
   margin:auto;
-  padding:30px;
 }
 
-.league{
-  margin-bottom:20px;
-  background:#111827;
-  border-radius:10px;
-  overflow:hidden;
+.section{
+  margin-bottom:40px;
 }
 
-.league-header{
-  padding:12px 15px;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  background:#1f2937;
-  font-weight:bold;
+.section h2{
+  border-left:4px solid #22c55e;
+  padding-left:10px;
 }
 
-.flag{
-  width:20px;
-  height:15px;
-  object-fit:cover;
-}
-
-.league-games{
-  display:none;
-  padding:10px;
-}
-
-.game-card{
-  background:var(--card);
-  padding:10px 14px;
-  border-radius:8px;
-  margin-bottom:8px;
-  display:flex;
-  justify-content:space-between;
-  cursor:pointer;
-}
-
-.result-panel{
-  margin-top:30px;
-  background:var(--panel);
-  padding:20px;
-  border-radius:12px;
-}
-
-.metric{
-  margin:10px 0;
-}
-
-.bar-container{
-  background:#1f2937;
-  height:8px;
-  border-radius:5px;
-  overflow:hidden;
-  margin-top:5px;
-}
-
-.bar{
-  height:8px;
-  background:linear-gradient(90deg,#22c55e,#16a34a);
-  width:0%;
-  transition:width 1s ease;
-}
-
-.drawer{
-  position:fixed;
-  right:-100%;
-  top:0;
-  width:400px;
-  height:100%;
-  background:#111827;
-  padding:20px;
-  transition:0.4s;
-  overflow:auto;
-  z-index:999;
-}
-.drawer.open{
-  right:0;
-}
-
-.rank-card{
+.card{
   background:#1e293b;
-  padding:10px;
-  border-radius:8px;
+  padding:10px 14px;
   margin-bottom:8px;
-}
-
-.close-btn{
-  margin-top:15px;
-  padding:8px 12px;
-  border:none;
-  background:#ef4444;
-  color:white;
   border-radius:6px;
-  cursor:pointer;
+  font-size:14px;
 }
 
-.counter{
-  margin-left:6px;
+.small{
+  font-size:12px;
+  color:#94a3b8;
+}
+
+.loading{
+  font-size:18px;
 }
 
 </style>
@@ -194,215 +57,89 @@ button{
 <body>
 
 <header>
-  <div class="brand">Plakar Analytics</div>
-
-  <div class="buttons">
-    <button class="gold-btn" onclick="filtrar('premium')">🔥 70%+</button>
-    <button class="silver-btn" onclick="filtrar('medio')">⚡ 50-69%</button>
-    <button class="ultra-btn" onclick="filtrar('ultra')">
-      🚨 80%+ <span class="counter" id="ultraCount">(0)</span>
-    </button>
-    <button class="notify-btn" onclick="ativarNotificacoes()">🔔 Ativar Notificações</button>
-  </div>
+🎯 Radar Profissional – Top 20 por Mercado (≥55%)
 </header>
 
 <div class="container">
-  <div id="games"></div>
-  <div class="result-panel" id="analysis"></div>
-</div>
 
-<div class="drawer" id="rankingDrawer">
-  <h2 id="rankingTitle"></h2>
-  <div id="rankingContent"></div>
-  <button class="close-btn" onclick="fechar()">Fechar</button>
+<div id="conteudo" class="loading">Carregando análises...</div>
+
 </div>
 
 <script>
 
-let rankingData=[];
-
-async function carregarJogos(){
+async function carregar(){
 
   const res = await fetch("/api/games");
   const jogos = await res.json();
-  rankingData=[];
-  const gamesDiv=document.getElementById("games");
-  gamesDiv.innerHTML="";
 
-  const ligas={};
+  let casa = [];
+  let fora = [];
+  let over = [];
+  let btts = [];
 
-  for(const jogo of jogos.slice(0,8)){
+  for(const jogo of jogos.slice(0,20)){
 
-    if(!ligas[jogo.competition]){
-      ligas[jogo.competition]={
-        country:jogo.country,
-        jogos:[]
-      };
+    const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
+    const data = await r.json();
+
+    if(data.probCasa >= 0.55){
+      casa.push({ jogo:`${jogo.home} vs ${jogo.away}`, prob:data.probCasa });
     }
 
-    ligas[jogo.competition].jogos.push(jogo);
+    if(data.probFora >= 0.55){
+      fora.push({ jogo:`${jogo.home} vs ${jogo.away}`, prob:data.probFora });
+    }
 
-    const r=await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
-    const data=await r.json();
+    if(data.over25 >= 0.55){
+      over.push({ jogo:`${jogo.home} vs ${jogo.away}`, prob:data.over25 });
+    }
 
-    rankingData.push({
-      home:jogo.home,
-      away:jogo.away,
-      probCasa:data.probCasa,
-      probFora:data.probFora,
-      over:data.over25,
-      btts:data.btts
-    });
+    if(data.btts >= 0.55){
+      btts.push({ jogo:`${jogo.home} vs ${jogo.away}`, prob:data.btts });
+    }
   }
 
-  for(const liga in ligas){
+  casa.sort((a,b)=>b.prob-a.prob);
+  fora.sort((a,b)=>b.prob-a.prob);
+  over.sort((a,b)=>b.prob-a.prob);
+  btts.sort((a,b)=>b.prob-a.prob);
 
-    const countryCode = ligas[liga].country?.slice(0,2)?.toLowerCase();
-    const flagUrl = countryCode ? `https://flagcdn.com/24x18/${countryCode}.png` : "";
+  function render(lista, titulo){
 
-    const leagueDiv=document.createElement("div");
-    leagueDiv.className="league";
+    if(lista.length===0){
+      return `
+        <div class="section">
+          <h2>${titulo}</h2>
+          <div class="card">Nenhuma oportunidade ≥55%</div>
+        </div>
+      `;
+    }
 
-    leagueDiv.innerHTML=`
-      <div class="league-header" onclick="toggleLiga(this)">
-        <img class="flag" src="${flagUrl}">
-        ${liga}
-      </div>
-      <div class="league-games">
-        ${ligas[liga].jogos.map(j=>`
-          <div class="game-card" onclick="analisar('${j.homeId}','${j.awayId}','${j.home}','${j.away}')">
-            ${j.home} vs ${j.away}
-            <span>${j.status}</span>
+    return `
+      <div class="section">
+        <h2>${titulo}</h2>
+        ${lista.slice(0,20).map((item,i)=>`
+          <div class="card">
+            ${i+1}. ${item.jogo}
+            <div class="small">${(item.prob*100).toFixed(2)}%</div>
           </div>
         `).join("")}
       </div>
     `;
-
-    gamesDiv.appendChild(leagueDiv);
   }
 
-  atualizarContadorUltra();
-  verificarNotificacoes();
+  document.getElementById("conteudo").innerHTML = 
+      render(casa,"🏠 Vitória Casa")
+    + render(fora,"🚩 Vitória Fora")
+    + render(over,"⚽ Over 2.5")
+    + render(btts,"🎯 Ambos Marcam");
+
 }
 
-function toggleLiga(el){
-  const games=el.nextElementSibling;
-  games.style.display = games.style.display==="block" ? "none" : "block";
-}
-
-function atualizarContadorUltra(){
-  const ultra = rankingData.filter(j =>
-    j.probCasa>=0.80 || j.probFora>=0.80 || j.over>=0.80 || j.btts>=0.80
-  );
-  document.getElementById("ultraCount").innerText=`(${ultra.length})`;
-}
-
-function ativarNotificacoes(){
-  if(Notification.permission==="default"){
-    Notification.requestPermission();
-  }
-}
-
-function verificarNotificacoes(){
-
-  if(Notification.permission!=="granted") return;
-
-  const ultra = rankingData.filter(j =>
-    j.probCasa>=0.80 || j.probFora>=0.80 || j.over>=0.80 || j.btts>=0.80
-  );
-
-  const premium = rankingData.filter(j =>
-    j.probCasa>=0.70 || j.probFora>=0.70 || j.over>=0.70 || j.btts>=0.70
-  );
-
-  if(ultra.length>0){
-    new Notification("🚨 ALERTA 80%+",{
-      body:`${ultra.length} oportunidade(s) ultra encontradas hoje.`
-    });
-  } else if(premium.length>0){
-    new Notification("🔥 Oportunidades 70%+",{
-      body:`${premium.length} oportunidade(s) fortes hoje.`
-    });
-  }
-}
-
-function filtrar(tipo){
-
-  let filtrado=[];
-  let titulo="";
-
-  if(tipo==="ultra"){
-    titulo="🚨 ALERTA MÁXIMO (80%+)";
-    filtrado=rankingData.filter(j =>
-      j.probCasa>=0.80 || j.probFora>=0.80 || j.over>=0.80 || j.btts>=0.80
-    );
-  }
-
-  if(tipo==="premium"){
-    titulo="🔥 Oportunidades Premium (70%+)";
-    filtrado=rankingData.filter(j =>
-      j.probCasa>=0.70 || j.probFora>=0.70 || j.over>=0.70 || j.btts>=0.70
-    );
-  }
-
-  if(tipo==="medio"){
-    titulo="⚡ Nível Médio (50-69%)";
-    filtrado=rankingData.filter(j =>
-      (j.probCasa>=0.50 && j.probCasa<0.70) ||
-      (j.probFora>=0.50 && j.probFora<0.70) ||
-      (j.over>=0.50 && j.over<0.70) ||
-      (j.btts>=0.50 && j.btts<0.70)
-    );
-  }
-
-  const div=document.getElementById("rankingContent");
-  document.getElementById("rankingTitle").innerText=titulo;
-
-  if(filtrado.length===0){
-    div.innerHTML="<div class='rank-card'>Nenhuma oportunidade encontrada.</div>";
-  } else {
-    div.innerHTML=filtrado.map(j=>`
-      <div class="rank-card">
-        ${j.home} vs ${j.away}
-      </div>
-    `).join("");
-  }
-
-  document.getElementById("rankingDrawer").classList.add("open");
-}
-
-function fechar(){
-  document.getElementById("rankingDrawer").classList.remove("open");
-}
-
-async function analisar(homeId,awayId,home,away){
-
-  document.getElementById("analysis").innerHTML="Analisando...";
-
-  const res=await fetch(`/api/analyze?homeId=${homeId}&awayId=${awayId}&home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
-  const data=await res.json();
-
-  function bar(percent,id){
-    setTimeout(()=>{document.getElementById(id).style.width=percent+"%";},100);
-  }
-
-  document.getElementById("analysis").innerHTML=`
-    <h2>${data.home} vs ${data.away}</h2>
-    ${["probCasa","probEmpate","probFora","over25","btts"].map((k,i)=>`
-      <div class="metric">${k.replace("prob","").replace("over25","Over").replace("btts","BTTS")} ${(data[k]*100).toFixed(2)}%
-      <div class="bar-container"><div class="bar" id="b${i}"></div></div></div>
-    `).join("")}
-  `;
-
-  bar(data.probCasa*100,"b0");
-  bar(data.probEmpate*100,"b1");
-  bar(data.probFora*100,"b2");
-  bar(data.over25*100,"b3");
-  bar(data.btts*100,"b4");
-}
-
-carregarJogos();
+carregar();
 
 </script>
+
 </body>
 </html>
