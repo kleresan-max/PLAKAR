@@ -2,9 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Radar Profissional + Assertividade</title>
+<title>Plakar Dashboard Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
 
 body{
@@ -15,38 +14,87 @@ body{
 }
 
 header{
-  padding:20px;
   background:#111827;
+  padding:15px;
   font-size:20px;
   font-weight:bold;
+  text-align:center;
+}
+
+nav{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  background:#1e293b;
+  padding:10px;
+  flex-wrap:wrap;
+}
+
+nav button{
+  background:#334155;
+  border:none;
+  padding:8px 14px;
+  color:white;
+  border-radius:6px;
+  cursor:pointer;
+}
+
+nav button.active{
+  background:#22c55e;
 }
 
 .container{
-  padding:25px;
-  max-width:1300px;
+  padding:20px;
+  max-width:1200px;
   margin:auto;
 }
 
-.section{
-  margin-bottom:40px;
+.tab{
+  display:none;
+}
+
+.tab.active{
+  display:block;
 }
 
 .card{
   background:#1e293b;
-  padding:10px 14px;
-  margin-bottom:8px;
-  border-radius:6px;
+  padding:15px;
+  margin-bottom:10px;
+  border-radius:8px;
+}
+
+.card-header{
   display:flex;
   justify-content:space-between;
   align-items:center;
 }
 
-.left{
-  max-width:70%;
+.card button{
+  margin-top:8px;
+  background:#2563eb;
+  border:none;
+  padding:6px 10px;
+  border-radius:4px;
+  color:white;
+  cursor:pointer;
 }
 
-.right{
-  text-align:right;
+.chances{
+  margin-top:10px;
+  display:none;
+  font-size:14px;
+}
+
+.strong{ color:#22c55e; font-weight:bold; }
+.medium{ color:#facc15; font-weight:bold; }
+.neutral{ color:#cbd5e1; }
+
+.panel{
+  background:#111827;
+  padding:20px;
+  border-radius:8px;
+  margin-top:20px;
 }
 
 .small{
@@ -54,237 +102,143 @@ header{
   color:#94a3b8;
 }
 
-.strong{ color:#22c55e; font-weight:bold; }
-.medium{ color:#84cc16; font-weight:bold; }
-.neutral{ color:#cbd5e1; }
-
-.panel{
-  background:#111827;
-  padding:20px;
-  border-radius:8px;
-  margin-top:40px;
-}
-
-.loading{
-  font-size:18px;
-}
-
 </style>
 </head>
 <body>
 
-<header>
-🎯 Radar Profissional + Painel de Assertividade  
-<span style="font-size:12px;color:#94a3b8;">Atualiza automaticamente a cada 10 minutos</span>
-</header>
+<header>⚽ Plakar Dashboard Pro</header>
+
+<nav>
+<button onclick="trocarAba('radar')" class="active">Radar</button>
+<button onclick="trocarAba('ouro')">Ouro</button>
+<button onclick="trocarAba('prata')">Prata</button>
+<button onclick="trocarAba('live')">Ao Vivo</button>
+<button onclick="trocarAba('stats')">Estatísticas</button>
+</nav>
 
 <div class="container">
 
-<div id="conteudo" class="loading">Carregando análises...</div>
+<div id="radar" class="tab active"></div>
+<div id="ouro" class="tab"></div>
+<div id="prata" class="tab"></div>
+<div id="live" class="tab"></div>
 
-<div class="panel">
-<h2>📊 Painel de Assertividade</h2>
-<div id="estatisticas">Calculando...</div>
+<div id="stats" class="tab">
+  <div class="panel">
+    <h2>📊 Assertividade</h2>
+    <div id="estatisticas">Calculando...</div>
+  </div>
 </div>
 
 </div>
 
 <script>
 
-/* =========================
-   SALVAR PREVISÕES
-========================= */
-
-function salvarPrevisao(registro){
-
-  let historico = JSON.parse(localStorage.getItem("historico") || "[]");
-
-  const jaExiste = historico.find(h =>
-    h.jogo === registro.jogo &&
-    h.mercado === registro.mercado
-  );
-
-  if(!jaExiste){
-    historico.push(registro);
-    localStorage.setItem("historico", JSON.stringify(historico));
-  }
+function trocarAba(id){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+  event.target.classList.add("active");
 }
 
-/* =========================
-   VERIFICAR RESULTADOS
-========================= */
-
-async function verificarResultados(){
-
-  let historico = JSON.parse(localStorage.getItem("historico") || "[]");
-
-  for(let registro of historico){
-
-    if(registro.status !== "pendente") continue;
-
-    try{
-
-      const res = await fetch(`/api/result?home=${encodeURIComponent(registro.home)}&away=${encodeURIComponent(registro.away)}`);
-      const resultado = await res.json();
-
-      if(!resultado || resultado.status !== "FINISHED") continue;
-
-      const golsCasa = resultado.homeGoals;
-      const golsFora = resultado.awayGoals;
-
-      let acertou = false;
-
-      if(registro.mercado === "Casa" && golsCasa > golsFora) acertou = true;
-      if(registro.mercado === "Fora" && golsFora > golsCasa) acertou = true;
-      if(registro.mercado === "Over" && (golsCasa + golsFora) > 2) acertou = true;
-      if(registro.mercado === "BTTS" && golsCasa > 0 && golsFora > 0) acertou = true;
-
-      registro.status = acertou ? "acerto" : "erro";
-
-    } catch(e){
-      console.log("Erro ao verificar resultado");
-    }
-  }
-
-  localStorage.setItem("historico", JSON.stringify(historico));
-  atualizarEstatisticas();
+function classe(prob){
+  if(prob>=0.70) return "strong";
+  if(prob>=0.60) return "medium";
+  return "neutral";
 }
 
-/* =========================
-   ESTATÍSTICAS
-========================= */
-
-function atualizarEstatisticas(){
-
-  let historico = JSON.parse(localStorage.getItem("historico") || "[]");
-
-  const finalizados = historico.filter(h => h.status !== "pendente");
-
-  const mercados = {
-    Casa: { acertos:0, erros:0 },
-    Fora: { acertos:0, erros:0 },
-    Over: { acertos:0, erros:0 },
-    BTTS: { acertos:0, erros:0 }
-  };
-
-  finalizados.forEach(h=>{
-    if(h.status === "acerto") mercados[h.mercado].acertos++;
-    if(h.status === "erro") mercados[h.mercado].erros++;
-  });
-
-  function calcular(obj){
-    const total = obj.acertos + obj.erros;
-    if(total === 0) return { total:0, taxa:0 };
-    return {
-      total: total,
-      taxa: ((obj.acertos/total)*100).toFixed(2)
-    };
-  }
-
-  const casaStats = calcular(mercados.Casa);
-  const foraStats = calcular(mercados.Fora);
-  const overStats = calcular(mercados.Over);
-  const bttsStats = calcular(mercados.BTTS);
-
-  const totalAcertos = finalizados.filter(h=>h.status==="acerto").length;
-  const totalErros = finalizados.filter(h=>h.status==="erro").length;
-  const totalGeral = totalAcertos + totalErros;
-  const taxaGeral = totalGeral > 0 ? ((totalAcertos/totalGeral)*100).toFixed(2) : 0;
-
-  document.getElementById("estatisticas").innerHTML = `
-    <strong>GERAL</strong><br>
-    Total Avaliado: ${totalGeral}<br>
-    Acertos: ${totalAcertos}<br>
-    Erros: ${totalErros}<br>
-    Taxa Geral: ${taxaGeral}%<br><br>
-
-    <strong>🏠 Casa</strong><br>
-    Avaliados: ${casaStats.total}<br>
-    Taxa: ${casaStats.taxa}%<br><br>
-
-    <strong>🚩 Fora</strong><br>
-    Avaliados: ${foraStats.total}<br>
-    Taxa: ${foraStats.taxa}%<br><br>
-
-    <strong>⚽ Over 2.5</strong><br>
-    Avaliados: ${overStats.total}<br>
-    Taxa: ${overStats.taxa}%<br><br>
-
-    <strong>🎯 BTTS</strong><br>
-    Avaliados: ${bttsStats.total}<br>
-    Taxa: ${bttsStats.taxa}%
-  `;
+function toggleChances(btn){
+  const div = btn.nextElementSibling;
+  div.style.display = div.style.display==="block"?"none":"block";
 }
 
-/* =========================
-   CARREGAR E ANALISAR
-========================= */
+function salvar(reg){
+  let h = JSON.parse(localStorage.getItem("historico")||"[]");
+  if(!h.find(x=>x.jogo===reg.jogo && x.mercado===reg.mercado)){
+    h.push(reg);
+    localStorage.setItem("historico",JSON.stringify(h));
+  }
+}
 
 async function carregar(){
-
-  document.getElementById("conteudo").innerHTML = "Atualizando análises...";
 
   const res = await fetch("/api/games");
   const jogos = await res.json();
 
-  let conteudo = "";
+  let radarHTML="";
+  let ouroHTML="";
+  let prataHTML="";
+  let liveHTML="";
 
-  for(const jogo of jogos.slice(0,25)){
+  for(const jogo of jogos.slice(0,20)){
 
     const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
     const data = await r.json();
 
     const mercados = [
-      { nome:"Casa", prob:data.probCasa },
-      { nome:"Fora", prob:data.probFora },
-      { nome:"Over", prob:data.over25 },
-      { nome:"BTTS", prob:data.btts }
+      {nome:"Casa",prob:data.probCasa},
+      {nome:"Fora",prob:data.probFora},
+      {nome:"Over",prob:data.over25},
+      {nome:"BTTS",prob:data.btts}
     ];
 
-    mercados.forEach(m=>{
-
-      if(m.prob >= 0.55){
-
-        salvarPrevisao({
-          jogo:`${jogo.home} vs ${jogo.away}`,
-          home:jogo.home,
-          away:jogo.away,
-          mercado:m.nome,
-          prob:m.prob,
-          status:"pendente"
-        });
-
-        const classe = m.prob >=0.70 ? "strong" :
-                       m.prob >=0.60 ? "medium" : "neutral";
-
-        conteudo += `
-          <div class="card">
-            <div class="left">
-              ${m.nome} – ${jogo.home} vs ${jogo.away}
-              <div class="small">
-                ${(m.prob*100).toFixed(2)}% | Odd Justa ${(1/m.prob).toFixed(2)}
-              </div>
-            </div>
-            <div class="${classe}">
-              ${(m.prob*100).toFixed(2)}%
-            </div>
+    let card = `
+      <div class="card">
+        <div class="card-header">
+          <div>
+            ${jogo.home} vs ${jogo.away}
+            <div class="small">${jogo.status}</div>
           </div>
-        `;
-      }
-    });
+        </div>
+        <button onclick="toggleChances(this)">Ver Chances</button>
+        <div class="chances">
+          ${mercados.map(m=>{
+            if(m.prob>=0.55){
+              salvar({
+                jogo:`${jogo.home} vs ${jogo.away}`,
+                mercado:m.nome,
+                prob:m.prob,
+                status:"pendente"
+              });
+              return `<div class="${classe(m.prob)}">
+                ${m.nome}: ${(m.prob*100).toFixed(2)}% | Odd ${(1/m.prob).toFixed(2)}
+              </div>`;
+            }
+            return "";
+          }).join("")}
+        </div>
+      </div>
+    `;
+
+    if(jogo.status==="LIVE"){
+      liveHTML+=card;
+    }else{
+      radarHTML+=card;
+    }
+
+    if(mercados.some(m=>m.prob>=0.70)) ouroHTML+=card;
+    if(mercados.some(m=>m.prob>=0.60 && m.prob<0.70)) prataHTML+=card;
   }
 
-  document.getElementById("conteudo").innerHTML = conteudo;
+  document.getElementById("radar").innerHTML=radarHTML;
+  document.getElementById("ouro").innerHTML=ouroHTML;
+  document.getElementById("prata").innerHTML=prataHTML;
+  document.getElementById("live").innerHTML=liveHTML;
 
-  verificarResultados();
+  atualizarStats();
 }
 
-/* =========================
-   INICIALIZAÇÃO
-========================= */
+function atualizarStats(){
+  let h = JSON.parse(localStorage.getItem("historico")||"[]");
+  const total = h.filter(x=>x.status!=="pendente").length;
+  const acertos = h.filter(x=>x.status==="acerto").length;
+  const taxa = total>0?((acertos/total)*100).toFixed(2):0;
+  document.getElementById("estatisticas").innerHTML=
+    `Total Avaliado: ${total}<br>Taxa Geral: ${taxa}%`;
+}
 
 carregar();
-setInterval(carregar, 600000);
+setInterval(carregar,600000);
 
 </script>
 
