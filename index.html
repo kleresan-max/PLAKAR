@@ -8,7 +8,10 @@ body{background:#0f172a;color:white;font-family:Arial;padding:30px}
 .card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:10px;cursor:pointer}
 .card:hover{background:#334155}
 .result{background:#111827;padding:20px;border-radius:10px;margin-top:20px}
-input{margin-top:5px;margin-bottom:5px}
+input{margin:5px 0;padding:5px}
+button{padding:8px;margin-top:10px;cursor:pointer}
+.green{color:#00ff88;font-weight:bold}
+.red{color:#ff4d4d;font-weight:bold}
 </style>
 </head>
 <body>
@@ -38,6 +41,7 @@ async function carregarJogos(){
 }
 
 async function analisar(homeId,awayId,home,away){
+
   document.getElementById("analise").innerHTML="Analisando...";
 
   const res = await fetch(`/api/analyze?homeId=${homeId}&awayId=${awayId}&home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
@@ -45,9 +49,65 @@ async function analisar(homeId,awayId,home,away){
 
   document.getElementById("analise").innerHTML = `
     <h3>${data.home} vs ${data.away}</h3>
+
+    <strong>Probabilidades:</strong><br>
     Casa: ${(data.probCasa*100).toFixed(2)}%<br>
     Empate: ${(data.probEmpate*100).toFixed(2)}%<br>
-    Fora: ${(data.probFora*100).toFixed(2)}%
+    Fora: ${(data.probFora*100).toFixed(2)}%<br>
+    Over 2.5: ${(data.over25*100).toFixed(2)}%<br>
+    BTTS: ${(data.btts*100).toFixed(2)}%<br><br>
+
+    <strong>Inserir Odds:</strong><br>
+
+    Odd Casa <input type="number" id="oddCasa" step="0.01"><br>
+    Odd Empate <input type="number" id="oddEmpate" step="0.01"><br>
+    Odd Fora <input type="number" id="oddFora" step="0.01"><br>
+    Odd Over 2.5 <input type="number" id="oddOver" step="0.01"><br>
+    Odd BTTS <input type="number" id="oddBTTS" step="0.01"><br>
+
+    <button onclick="calcularEV(
+      ${data.probCasa},
+      ${data.probEmpate},
+      ${data.probFora},
+      ${data.over25},
+      ${data.btts}
+    )">Calcular EV</button>
+
+    <div id="evResultado" style="margin-top:15px;"></div>
+  `;
+}
+
+function calcularEV(pCasa,pEmp,pFora,pOver,pBTTS){
+
+  const oddCasa = parseFloat(document.getElementById("oddCasa").value);
+  const oddEmpate = parseFloat(document.getElementById("oddEmpate").value);
+  const oddFora = parseFloat(document.getElementById("oddFora").value);
+  const oddOver = parseFloat(document.getElementById("oddOver").value);
+  const oddBTTS = parseFloat(document.getElementById("oddBTTS").value);
+
+  function calcEV(prob,odd){
+    if(isNaN(odd)) return null;
+    return (prob*odd)-1;
+  }
+
+  const evCasa = calcEV(pCasa,oddCasa);
+  const evEmp = calcEV(pEmp,oddEmpate);
+  const evFora = calcEV(pFora,oddFora);
+  const evOver = calcEV(pOver,oddOver);
+  const evBTTS = calcEV(pBTTS,oddBTTS);
+
+  function formatEV(ev){
+    if(ev===null) return "-";
+    return `<span class="${ev>0?'green':'red'}">${(ev*100).toFixed(2)}%</span>`;
+  }
+
+  document.getElementById("evResultado").innerHTML = `
+    <strong>Valor Esperado:</strong><br>
+    Casa: ${formatEV(evCasa)}<br>
+    Empate: ${formatEV(evEmp)}<br>
+    Fora: ${formatEV(evFora)}<br>
+    Over 2.5: ${formatEV(evOver)}<br>
+    BTTS: ${formatEV(evBTTS)}
   `;
 }
 
