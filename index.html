@@ -5,66 +5,62 @@
 <title>Plakar Analytics</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
+
 :root{
   --bg:#0b1220;
-  --panel:#0f172a;
-  --card:#111827;
+  --panel:#111827;
+  --card:#1e293b;
   --muted:#94a3b8;
   --accent:#22c55e;
+  --danger:#ef4444;
   --gold1:#f5d27a;
   --gold2:#d4a017;
 }
 
 *{box-sizing:border-box}
+
 body{
   margin:0;
-  background:linear-gradient(180deg,#0b1220,#0e1628);
+  background:linear-gradient(180deg,#0b1220,#0f172a);
+  font-family:Inter, Arial;
   color:white;
-  font-family:Inter, Arial, sans-serif;
 }
 
 header{
-  padding:18px 24px;
   display:flex;
   justify-content:space-between;
   align-items:center;
-  background:rgba(15,23,42,0.9);
-  backdrop-filter:blur(6px);
+  padding:18px 30px;
+  background:rgba(15,23,42,0.95);
+  backdrop-filter:blur(8px);
   border-bottom:1px solid rgba(255,255,255,0.05);
 }
 
 .brand{
   font-size:20px;
   font-weight:600;
-  letter-spacing:0.5px;
 }
 
 .gold-btn{
   background:linear-gradient(135deg,var(--gold1),var(--gold2));
   color:#111;
-  padding:10px 18px;
+  padding:10px 20px;
   border:none;
-  border-radius:25px;
+  border-radius:30px;
   font-weight:600;
   cursor:pointer;
-  box-shadow:0 0 20px rgba(212,160,23,0.5);
+  box-shadow:0 0 25px rgba(212,160,23,0.6);
   transition:0.3s;
 }
 .gold-btn:hover{
   transform:translateY(-2px);
-  box-shadow:0 0 30px rgba(212,160,23,0.8);
+  box-shadow:0 0 40px rgba(212,160,23,0.9);
 }
 
 .container{
-  padding:30px;
   max-width:1100px;
   margin:auto;
-}
-
-.section-title{
-  margin:30px 0 15px 0;
-  font-size:18px;
-  color:var(--muted);
+  padding:30px;
 }
 
 .game-card{
@@ -78,25 +74,40 @@ header{
   transition:0.2s;
 }
 .game-card:hover{
-  background:#1f2937;
+  background:#334155;
 }
 
 .result-panel{
   margin-top:30px;
   background:var(--panel);
-  padding:20px;
-  border-radius:12px;
-  box-shadow:0 0 30px rgba(0,0,0,0.4);
+  padding:25px;
+  border-radius:14px;
+  box-shadow:0 0 40px rgba(0,0,0,0.5);
 }
 
 .metric{
-  margin:6px 0;
+  margin:12px 0;
+}
+
+.bar-container{
+  background:#1f2937;
+  height:8px;
+  border-radius:5px;
+  overflow:hidden;
+  margin-top:5px;
+}
+
+.bar{
+  height:8px;
+  background:linear-gradient(90deg,#22c55e,#16a34a);
+  width:0%;
+  transition:width 1s ease;
 }
 
 .drawer{
   position:fixed;
-  top:0;
   right:-100%;
+  top:0;
   width:420px;
   height:100%;
   background:#111827;
@@ -110,23 +121,23 @@ header{
   right:0;
 }
 
-.drawer h2{
-  margin-top:0;
-}
-
 .rank-card{
   background:#1e293b;
   padding:12px;
   border-radius:8px;
   margin-bottom:10px;
   font-size:14px;
+  transition:0.3s;
+}
+.rank-card:hover{
+  background:#334155;
 }
 
 .close-btn{
-  margin-top:10px;
-  padding:6px 12px;
+  margin-top:15px;
+  padding:8px 12px;
   border:none;
-  background:#ef4444;
+  background:var(--danger);
   color:white;
   border-radius:6px;
   cursor:pointer;
@@ -136,6 +147,7 @@ header{
   font-size:12px;
   color:var(--muted);
 }
+
 </style>
 </head>
 <body>
@@ -147,9 +159,7 @@ header{
 
 <div class="container">
 
-  <div class="section-title">Jogos Disponíveis</div>
   <div id="games">Carregando...</div>
-
   <div class="result-panel" id="analysis"></div>
 
 </div>
@@ -162,27 +172,25 @@ header{
 
 <script>
 
-let rankingData = [];
+let rankingData=[];
 
 async function carregarJogos(){
 
   const res = await fetch("/api/games");
   const jogos = await res.json();
-  const gamesDiv = document.getElementById("games");
-  gamesDiv.innerHTML="";
+  const div=document.getElementById("games");
+  div.innerHTML="";
 
-  const limit = jogos.slice(0,8);
+  const limit=jogos.slice(0,8);
 
   for(const jogo of limit){
-
-    const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
-    const data = await r.json();
+    const r=await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
+    const data=await r.json();
 
     rankingData.push({
       home:jogo.home,
       away:jogo.away,
       probCasa:data.probCasa,
-      probFora:data.probFora,
       over:data.over25,
       btts:data.btts
     });
@@ -191,7 +199,7 @@ async function carregarJogos(){
   gerarRanking();
 
   jogos.forEach(jogo=>{
-    gamesDiv.innerHTML+=`
+    div.innerHTML+=`
       <div class="game-card" onclick="analisar('${jogo.homeId}','${jogo.awayId}','${jogo.home}','${jogo.away}')">
         ${jogo.home} vs ${jogo.away}
         <span class="small">${jogo.status}</span>
@@ -202,18 +210,18 @@ async function carregarJogos(){
 
 function gerarRanking(){
 
-  const topVit = [...rankingData].sort((a,b)=>b.probCasa-a.probCasa).slice(0,5);
-  const topOver = [...rankingData].sort((a,b)=>b.over-a.over).slice(0,5);
-  const topBTTS = [...rankingData].sort((a,b)=>b.btts-a.btts).slice(0,5);
+  const topVit=[...rankingData].sort((a,b)=>b.probCasa-a.probCasa).slice(0,5);
+  const topOver=[...rankingData].sort((a,b)=>b.over-a.over).slice(0,5);
+  const topBTTS=[...rankingData].sort((a,b)=>b.btts-a.btts).slice(0,5);
 
-  const div = document.getElementById("rankingContent");
+  const div=document.getElementById("rankingContent");
 
   div.innerHTML=`
-    <h3>🏆 Vitórias Mais Prováveis</h3>
+    <h3>🏆 Vitórias</h3>
     ${topVit.map(j=>`
       <div class="rank-card">
         ${j.home} vs ${j.away}
-        <div class="small">Casa: ${(j.probCasa*100).toFixed(2)}%</div>
+        <div class="small">${(j.probCasa*100).toFixed(2)}%</div>
       </div>
     `).join("")}
 
@@ -221,7 +229,7 @@ function gerarRanking(){
     ${topOver.map(j=>`
       <div class="rank-card">
         ${j.home} vs ${j.away}
-        <div class="small">Over: ${(j.over*100).toFixed(2)}%</div>
+        <div class="small">${(j.over*100).toFixed(2)}%</div>
       </div>
     `).join("")}
 
@@ -229,7 +237,7 @@ function gerarRanking(){
     ${topBTTS.map(j=>`
       <div class="rank-card">
         ${j.home} vs ${j.away}
-        <div class="small">BTTS: ${(j.btts*100).toFixed(2)}%</div>
+        <div class="small">${(j.btts*100).toFixed(2)}%</div>
       </div>
     `).join("")}
   `;
@@ -243,19 +251,49 @@ async function analisar(homeId,awayId,home,away){
 
   document.getElementById("analysis").innerHTML="Analisando...";
 
-  const res = await fetch(`/api/analyze?homeId=${homeId}&awayId=${awayId}&home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
-  const data = await res.json();
+  const res=await fetch(`/api/analyze?homeId=${homeId}&awayId=${awayId}&home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
+  const data=await res.json();
 
-  function oddJusta(prob){ return (1/prob).toFixed(2); }
+  function bar(percent,id){
+    setTimeout(()=>{
+      document.getElementById(id).style.width=percent+"%";
+    },100);
+  }
 
   document.getElementById("analysis").innerHTML=`
     <h2>${data.home} vs ${data.away}</h2>
-    <div class="metric">Casa: ${(data.probCasa*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.probCasa)}</div>
-    <div class="metric">Empate: ${(data.probEmpate*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.probEmpate)}</div>
-    <div class="metric">Fora: ${(data.probFora*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.probFora)}</div>
-    <div class="metric">Over 2.5: ${(data.over25*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.over25)}</div>
-    <div class="metric">BTTS: ${(data.btts*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.btts)}</div>
+
+    <div class="metric">
+      Casa ${(data.probCasa*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="bar1"></div></div>
+    </div>
+
+    <div class="metric">
+      Empate ${(data.probEmpate*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="bar2"></div></div>
+    </div>
+
+    <div class="metric">
+      Fora ${(data.probFora*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="bar3"></div></div>
+    </div>
+
+    <div class="metric">
+      Over 2.5 ${(data.over25*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="bar4"></div></div>
+    </div>
+
+    <div class="metric">
+      BTTS ${(data.btts*100).toFixed(2)}%
+      <div class="bar-container"><div class="bar" id="bar5"></div></div>
+    </div>
   `;
+
+  bar((data.probCasa*100).toFixed(2),"bar1");
+  bar((data.probEmpate*100).toFixed(2),"bar2");
+  bar((data.probFora*100).toFixed(2),"bar3");
+  bar((data.over25*100).toFixed(2),"bar4");
+  bar((data.btts*100).toFixed(2),"bar5");
 }
 
 carregarJogos();
