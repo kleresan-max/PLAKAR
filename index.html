@@ -2,60 +2,58 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Jogos ao Vivo</title>
+<title>Plakar Analytics</title>
 <style>
-body{
-  background:#0f172a;
-  color:white;
-  font-family:Arial;
-  padding:30px;
-}
-.card{
-  background:#1e293b;
-  padding:15px;
-  border-radius:10px;
-  margin-bottom:10px;
-}
-h2{
-  margin-bottom:20px;
-}
+body{background:#0f172a;color:white;font-family:Arial;padding:30px}
+.card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:10px;cursor:pointer}
+.card:hover{background:#334155}
+.result{background:#111827;padding:20px;border-radius:10px;margin-top:20px}
+h2{margin-bottom:20px}
 </style>
 </head>
 <body>
 
-<h2>Jogos de Hoje</h2>
+<h2>Jogos (Clique para Analisar)</h2>
 <div id="jogos">Carregando...</div>
 
+<div class="result" id="analise"></div>
+
 <script>
+
 async function carregarJogos(){
-  try{
-    const res = await fetch("/api/games");
-    const jogos = await res.json();
+  const res = await fetch("/api/games");
+  const jogos = await res.json();
 
-    const div = document.getElementById("jogos");
-    div.innerHTML = "";
+  const div = document.getElementById("jogos");
+  div.innerHTML = "";
 
-    if(jogos.length === 0){
-      div.innerHTML = "Nenhum jogo encontrado hoje.";
-      return;
-    }
+  jogos.forEach(jogo=>{
+    div.innerHTML += `
+      <div class="card" onclick="analisar('${jogo.home}','${jogo.away}')">
+        <strong>${jogo.competition}</strong><br>
+        ${jogo.home} vs ${jogo.away}<br>
+        Status: ${jogo.status}
+      </div>
+    `;
+  });
+}
 
-    jogos.forEach(jogo=>{
-      div.innerHTML += `
-        <div class="card">
-          <strong>${jogo.competition}</strong><br>
-          ${jogo.home} vs ${jogo.away}<br>
-          Status: ${jogo.status}
-        </div>
-      `;
-    });
+async function analisar(home,away){
+  document.getElementById("analise").innerHTML="Analisando...";
 
-  }catch(error){
-    document.getElementById("jogos").innerHTML = "Erro ao carregar jogos.";
-  }
+  const res = await fetch(`/api/analyze?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
+  const data = await res.json();
+
+  document.getElementById("analise").innerHTML = `
+    <h3>${data.home} vs ${data.away}</h3>
+    Vitória Casa: ${(data.probCasa*100).toFixed(2)}%<br>
+    Empate: ${(data.probEmpate*100).toFixed(2)}%<br>
+    Vitória Fora: ${(data.probFora*100).toFixed(2)}%
+  `;
 }
 
 carregarJogos();
+
 </script>
 
 </body>
