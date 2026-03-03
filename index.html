@@ -9,12 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
 <style>
-
 *{box-sizing:border-box}
-
 body{
   margin:0;
-  font-family:'Inter', sans-serif;
+  font-family:'Inter',sans-serif;
   background:linear-gradient(-45deg,#0f172a,#111827,#0b1220,#0f172a);
   background-size:400% 400%;
   animation:gradientMove 15s ease infinite;
@@ -33,41 +31,59 @@ header{
   font-size:22px;
   font-weight:800;
   background:rgba(0,0,0,0.4);
-  backdrop-filter:blur(10px);
+  backdrop-filter:blur(8px);
 }
 
+/* BOTÕES */
+.top-buttons{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  padding:10px;
+  flex-wrap:wrap;
+}
+
+.top-buttons button{
+  padding:8px 16px;
+  border-radius:20px;
+  border:none;
+  cursor:pointer;
+  background:#1e293b;
+  color:white;
+  font-weight:600;
+}
+
+.top-buttons .active{
+  background:#22c55e;
+}
+
+/* CONTAINER */
 .container{
-  padding:20px;
+  padding:15px;
   max-width:1100px;
   margin:auto;
 }
 
 /* LIGA */
 .league{
-  margin-top:30px;
+  margin-top:25px;
   font-size:14px;
   font-weight:600;
   color:#94a3b8;
   border-left:4px solid #22c55e;
-  padding-left:10px;
+  padding-left:8px;
 }
 
 /* CARD */
 .card{
-  background:rgba(30,41,59,0.8);
-  backdrop-filter:blur(8px);
+  background:rgba(30,41,59,0.85);
   margin-top:15px;
-  padding:20px;
-  border-radius:16px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.5);
-  transition:0.3s;
+  padding:15px;
+  border-radius:14px;
+  box-shadow:0 8px 25px rgba(0,0,0,0.5);
 }
 
-.card:hover{
-  transform:translateY(-6px);
-}
-
-/* TIMES */
+/* MATCH */
 .match{
   display:flex;
   justify-content:space-between;
@@ -77,83 +93,118 @@ header{
 .team{
   display:flex;
   align-items:center;
-  gap:10px;
+  gap:8px;
   width:35%;
 }
 
 .team img{
-  width:36px;
-  height:36px;
+  width:30px;
+  height:30px;
 }
 
 .score{
-  font-size:26px;
+  font-size:22px;
   font-weight:800;
-  text-align:center;
   width:20%;
-}
-
-/* ODDS */
-.odds{
-  display:flex;
-  justify-content:space-between;
-  margin-top:18px;
-  gap:10px;
-}
-
-.odd-box{
-  flex:1;
-  background:#0f172a;
-  padding:10px;
-  border-radius:10px;
   text-align:center;
-  font-size:13px;
-  transition:0.3s;
 }
 
-.odd-box:hover{
-  background:#1e293b;
+/* PROB BAR */
+.prob-container{
+  margin-top:12px;
 }
 
-/* OURO */
-.gold-badge{
+.prob-label{
+  font-size:12px;
+  margin-bottom:4px;
+}
+
+.bar{
+  height:6px;
+  background:#0f172a;
+  border-radius:10px;
+  overflow:hidden;
+}
+
+.fill{
+  height:100%;
+  background:#22c55e;
+}
+
+/* CONF */
+.conf{
+  font-size:11px;
+  margin-top:6px;
+}
+
+.alta{color:#22c55e}
+.media{color:#facc15}
+.baixa{color:#ef4444}
+
+/* BADGE */
+.gold{
   background:#d4af37;
   color:black;
-  padding:4px 8px;
-  border-radius:8px;
-  font-size:11px;
-  font-weight:bold;
-  margin-left:10px;
+  padding:3px 6px;
+  border-radius:6px;
+  font-size:10px;
+  margin-left:8px;
 }
 
-/* INDICADOR >=70% */
-.strong{
-  color:#22c55e;
-  font-weight:bold;
-  animation:pulse 1s infinite;
+/* RANKING */
+.ranking{
+  margin-top:20px;
+  background:#111827;
+  padding:15px;
+  border-radius:12px;
 }
 
-@keyframes pulse{
-  0%{opacity:1}
-  50%{opacity:0.4}
-  100%{opacity:1}
+.ranking h3{
+  margin-top:0;
 }
 
-.status{
-  margin-top:8px;
+.rank-item{
   font-size:12px;
-  color:#facc15;
+  margin-bottom:6px;
 }
 
+@media(max-width:600px){
+  .team span{font-size:12px}
+  .score{font-size:18px}
+}
 </style>
 </head>
 <body>
 
 <header>⚡ KLERIN ANÁLISES AI</header>
 
-<div class="container" id="conteudo"></div>
+<div class="top-buttons">
+  <button onclick="mudarModo('radar')" class="active" id="btnRadar">Radar</button>
+  <button onclick="mudarModo('ouro')" id="btnOuro">Ouro</button>
+  <button onclick="mudarModo('prata')" id="btnPrata">Prata</button>
+</div>
+
+<div class="container">
+  <div id="ranking"></div>
+  <div id="conteudo"></div>
+</div>
 
 <script>
+
+let modo="radar";
+
+function mudarModo(novo){
+  modo=novo;
+  document.querySelectorAll('.top-buttons button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn'+novo.charAt(0).toUpperCase()+novo.slice(1)).classList.add('active');
+  carregar();
+}
+
+function nivelConf(prob){
+  if(prob>=0.70) return "alta";
+  if(prob>=0.60) return "media";
+  return "baixa";
+}
 
 async function carregar(){
 
@@ -161,76 +212,85 @@ async function carregar(){
   const jogos = await res.json();
 
   let html="";
-  let ligas = {};
+  let rankingLista=[];
 
-  jogos.forEach(jogo=>{
-    if(!ligas[jogo.competition]){
-      ligas[jogo.competition]=[];
-    }
-    ligas[jogo.competition].push(jogo);
-  });
+  for(const jogo of jogos){
 
-  for(const liga in ligas){
+    const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
+    const data = await r.json();
 
-    html+=`<div class="league">${liga}</div>`;
+    const mercados=[
+      {nome:"Casa",prob:data.probCasa},
+      {nome:"Fora",prob:data.probFora},
+      {nome:"Over 2.5",prob:data.over25},
+      {nome:"BTTS",prob:data.btts}
+    ];
 
-    for(const jogo of ligas[liga]){
+    mercados.forEach(m=>{
+      rankingLista.push({
+        jogo: jogo.home+" vs "+jogo.away,
+        mercado:m.nome,
+        prob:m.prob
+      });
+    });
 
-      const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
-      const data = await r.json();
+    const temOuro = mercados.some(m=>m.prob>=0.70);
+    const temPrata = mercados.some(m=>m.prob>=0.60 && m.prob<0.70);
 
-      const mercados = [
-        {nome:"Casa",prob:data.probCasa},
-        {nome:"Fora",prob:data.probFora},
-        {nome:"Over 2.5",prob:data.over25},
-        {nome:"BTTS",prob:data.btts}
-      ];
+    if(modo==="ouro" && !temOuro) continue;
+    if(modo==="prata" && !temPrata) continue;
 
-      const temOuro = mercados.some(m=>m.prob>=0.70);
-
-      html+=`
-      <div class="card">
-
-        <div class="match">
-          <div class="team">
-            <img src="${jogo.homeCrest}">
-            ${jogo.home}
-          </div>
-
-          <div class="score">
-            ${jogo.homeGoals ?? "-"} x ${jogo.awayGoals ?? "-"}
-          </div>
-
-          <div class="team" style="justify-content:flex-end;">
-            ${jogo.away}
-            <img src="${jogo.awayCrest}">
-          </div>
+    html+=`
+    <div class="league">${jogo.competition}</div>
+    <div class="card">
+      <div class="match">
+        <div class="team">
+          <img src="${jogo.homeCrest}">
+          <span>${jogo.home}</span>
         </div>
-
-        <div class="status">
-          ${jogo.status}
-          ${temOuro ? '<span class="gold-badge">OURO</span>' : ''}
+        <div class="score">- x -</div>
+        <div class="team" style="justify-content:flex-end;">
+          <span>${jogo.away}</span>
+          <img src="${jogo.awayCrest}">
         </div>
-
-        <div class="odds">
-          ${mercados.map(m=>`
-            <div class="odd-box ${m.prob>=0.70 ? 'strong':''}">
-              ${m.nome}<br>
-              ${(m.prob*100).toFixed(0)}%
-            </div>
-          `).join("")}
-        </div>
-
       </div>
-      `;
-    }
+      ${mercados.map(m=>`
+        <div class="prob-container">
+          <div class="prob-label">
+            ${m.nome} ${(m.prob*100).toFixed(0)}%
+            ${m.prob>=0.70?'<span class="gold">OURO</span>':''}
+          </div>
+          <div class="bar">
+            <div class="fill" style="width:${m.prob*100}%"></div>
+          </div>
+          <div class="conf ${nivelConf(m.prob)}">
+            Confiança ${nivelConf(m.prob).toUpperCase()}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+    `;
   }
 
-  document.getElementById("conteudo").innerHTML = html;
+  document.getElementById("conteudo").innerHTML=html;
+
+  rankingLista.sort((a,b)=>b.prob-a.prob);
+  const top10=rankingLista.slice(0,10);
+
+  document.getElementById("ranking").innerHTML=`
+    <div class="ranking">
+      <h3>📊 Top 10 Oportunidades</h3>
+      ${top10.map(r=>`
+        <div class="rank-item">
+          ${r.jogo} — ${r.mercado} ${(r.prob*100).toFixed(0)}%
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 carregar();
-setInterval(carregar,600000);
+setInterval(carregar,30000);
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
