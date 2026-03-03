@@ -7,126 +7,239 @@
 <meta name="theme-color" content="#0f172a">
 <link rel="manifest" href="manifest.json">
 
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
 <style>
+*{box-sizing:border-box}
 body{
   margin:0;
-  font-family:Inter, Arial;
-  background:#0f172a;
+  font-family:'Inter', sans-serif;
+  background:linear-gradient(180deg,#0f172a,#0b1220);
   color:white;
 }
 
-/* LOGIN */
-.login-screen{
-  height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  flex-direction:column;
-  background:#0f172a;
-}
-
-.login-box{
-  background:#1e293b;
-  padding:30px;
-  border-radius:10px;
-  width:300px;
+/* HERO */
+.hero{
+  padding:40px 20px;
   text-align:center;
+  background:radial-gradient(circle at top,#1e293b,#0f172a);
 }
 
-input{
-  width:100%;
-  padding:8px;
-  margin-top:10px;
-  border-radius:6px;
-  border:none;
+.hero h1{
+  font-size:26px;
+  font-weight:800;
+  margin-bottom:10px;
 }
 
-button{
-  margin-top:15px;
-  padding:8px;
-  width:100%;
-  border:none;
-  border-radius:6px;
-  background:#22c55e;
-  color:white;
-  cursor:pointer;
+.hero p{
+  color:#94a3b8;
+  font-size:14px;
 }
 
-#error{
-  color:#ef4444;
-  font-size:12px;
-  margin-top:10px;
-}
-
-/* APP */
-#app{
-  display:none;
-}
-
-header{
+/* FILTER */
+.filter{
   padding:15px;
   text-align:center;
-  font-size:20px;
-  font-weight:600;
-  background:#111827;
 }
 
+select{
+  padding:8px 12px;
+  border-radius:8px;
+  border:none;
+  background:#1e293b;
+  color:white;
+}
+
+/* GRID */
+.grid{
+  display:grid;
+  gap:15px;
+  padding:20px;
+  max-width:1100px;
+  margin:auto;
+}
+
+/* CARD */
 .card{
-  background:#1e293b;
-  margin:15px;
-  padding:15px;
-  border-radius:10px;
+  background:linear-gradient(145deg,#1e293b,#172033);
+  border-radius:14px;
+  padding:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.5);
+  transition:0.3s;
+}
+
+.card:hover{
+  transform:translateY(-5px);
+}
+
+.league{
+  font-size:12px;
+  color:#94a3b8;
+  margin-bottom:12px;
+}
+
+.match{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.team{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:40%;
+}
+
+.team img{
+  width:30px;
+  height:30px;
+}
+
+.score{
+  font-size:18px;
+  font-weight:800;
+}
+
+.odds{
+  display:flex;
+  justify-content:space-between;
+  margin-top:15px;
+}
+
+.odd{
+  flex:1;
+  margin:0 5px;
+  background:#0f172a;
+  padding:8px;
+  border-radius:8px;
+  text-align:center;
+  font-size:13px;
+}
+
+.gold{background:#d4af37;color:black}
+.live{
+  background:#ef4444;
+  padding:4px 8px;
+  border-radius:6px;
+  font-size:10px;
+  animation:pulse 1s infinite;
+}
+
+@keyframes pulse{
+  0%{opacity:1}
+  50%{opacity:0.5}
+  100%{opacity:1}
+}
+
+/* BOTTOM NAV */
+.bottom{
+  position:fixed;
+  bottom:0;
+  width:100%;
+  background:#111827;
+  display:flex;
+  justify-content:space-around;
+  padding:12px 0;
+  border-top:1px solid rgba(255,255,255,0.1);
+}
+
+.bottom button{
+  background:none;
+  border:none;
+  color:#94a3b8;
+  font-size:13px;
+}
+
+.bottom button.active{
+  color:#22c55e;
 }
 
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login" class="login-screen">
-  <div class="login-box">
-    <h2>🔐 KLERIN ANÁLISES AI</h2>
-    <input type="password" id="senha" placeholder="Digite sua senha">
-    <button onclick="entrar()">Entrar</button>
-    <div id="error"></div>
-  </div>
+<div class="hero">
+  <h1>⚡ KLERIN ANÁLISES AI</h1>
+  <p>Análises avançadas em tempo real</p>
 </div>
 
-<!-- APP -->
-<div id="app">
-  <header>⚡ KLERIN ANÁLISES AI</header>
-  <div class="card">
-    Sistema protegido. Acesso autorizado.
-  </div>
+<div class="filter">
+  <select id="ligaFiltro">
+    <option>Todas as Ligas</option>
+  </select>
+</div>
+
+<div class="grid" id="conteudo">
+  <!-- Jogos aparecerão aqui -->
+</div>
+
+<div class="bottom">
+  <button class="active">Radar</button>
+  <button>Ouro</button>
+  <button>Ao Vivo</button>
 </div>
 
 <script>
 
-/* SENHA PRIVADA */
-const senhaCorreta = "KLERIN2025";
+async function carregar(){
 
-/* LOGIN */
-function entrar(){
-  const senha = document.getElementById("senha").value;
-  if(senha === senhaCorreta){
-    localStorage.setItem("autorizado","sim");
-    liberar();
-  } else {
-    document.getElementById("error").innerText="Senha incorreta";
+  try{
+
+    const res = await fetch("/api/games");
+    const jogos = await res.json();
+
+    let html="";
+
+    for(const jogo of jogos.slice(0,10)){
+
+      const homeCrest = `https://crests.football-data.org/${jogo.homeId}.svg`;
+      const awayCrest = `https://crests.football-data.org/${jogo.awayId}.svg`;
+
+      html+=`
+      <div class="card">
+
+        <div class="league">
+          ${jogo.competition}
+          ${jogo.status==="LIVE"?'<span class="live">LIVE</span>':''}
+        </div>
+
+        <div class="match">
+          <div class="team">
+            <img src="${homeCrest}">
+            ${jogo.home}
+          </div>
+
+          <div class="score">
+            ${jogo.homeGoals ?? "-"} x ${jogo.awayGoals ?? "-"}
+          </div>
+
+          <div class="team" style="justify-content:flex-end;">
+            ${jogo.away}
+            <img src="${awayCrest}">
+          </div>
+        </div>
+
+        <div class="odds">
+          <div class="odd">Casa</div>
+          <div class="odd">Empate</div>
+          <div class="odd">Fora</div>
+        </div>
+
+      </div>
+      `;
+    }
+
+    document.getElementById("conteudo").innerHTML = html;
+
+  }catch(e){
+    document.getElementById("conteudo").innerHTML="<p style='text-align:center;color:#94a3b8'>Erro ao carregar jogos</p>";
   }
+
 }
 
-function liberar(){
-  document.getElementById("login").style.display="none";
-  document.getElementById("app").style.display="block";
-}
+carregar();
 
-/* Verifica se já está logado */
-if(localStorage.getItem("autorizado")==="sim"){
-  liberar();
-}
-
-/* PWA */
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
 }
