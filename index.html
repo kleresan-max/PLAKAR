@@ -8,7 +8,7 @@ body{background:#0f172a;color:white;font-family:Arial;padding:30px}
 .card{background:#1e293b;padding:15px;border-radius:10px;margin-bottom:10px;cursor:pointer}
 .card:hover{background:#334155}
 .result{background:#111827;padding:20px;border-radius:10px;margin-top:20px}
-h2{margin-bottom:20px}
+input{margin-top:5px;margin-bottom:5px}
 </style>
 </head>
 <body>
@@ -23,13 +23,12 @@ h2{margin-bottom:20px}
 async function carregarJogos(){
   const res = await fetch("/api/games");
   const jogos = await res.json();
-
   const div = document.getElementById("jogos");
   div.innerHTML = "";
 
   jogos.forEach(jogo=>{
     div.innerHTML += `
-      <div class="card" onclick="analisar('${jogo.home}','${jogo.away}')">
+      <div class="card" onclick="analisar('${jogo.homeId}','${jogo.awayId}','${jogo.home}','${jogo.away}')">
         <strong>${jogo.competition}</strong><br>
         ${jogo.home} vs ${jogo.away}<br>
         Status: ${jogo.status}
@@ -38,73 +37,22 @@ async function carregarJogos(){
   });
 }
 
-async function analisar(home,away){
+async function analisar(homeId,awayId,home,away){
   document.getElementById("analise").innerHTML="Analisando...";
 
-  const res = await fetch(`/api/analyze?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
+  const res = await fetch(`/api/analyze?homeId=${homeId}&awayId=${awayId}&home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
   const data = await res.json();
 
   document.getElementById("analise").innerHTML = `
     <h3>${data.home} vs ${data.away}</h3>
-
-    <strong>Probabilidades:</strong><br>
     Casa: ${(data.probCasa*100).toFixed(2)}%<br>
     Empate: ${(data.probEmpate*100).toFixed(2)}%<br>
-    Fora: ${(data.probFora*100).toFixed(2)}%<br><br>
-
-    <strong>Inserir Odds:</strong><br>
-    <input type="number" id="oddCasa" placeholder="Odd Casa" step="0.01"><br>
-    <input type="number" id="oddEmpate" placeholder="Odd Empate" step="0.01"><br>
-    <input type="number" id="oddFora" placeholder="Odd Fora" step="0.01"><br><br>
-
-    <button onclick="calcularEV(${data.probCasa},${data.probEmpate},${data.probFora})">
-      Calcular EV
-    </button>
-
-    <div id="evResultado" style="margin-top:15px;"></div>
-  `;
-}function calcularEV(probCasa,probEmpate,probFora){
-
-  const oddCasa = parseFloat(document.getElementById("oddCasa").value);
-  const oddEmpate = parseFloat(document.getElementById("oddEmpate").value);
-  const oddFora = parseFloat(document.getElementById("oddFora").value);
-
-  if(isNaN(oddCasa)||isNaN(oddEmpate)||isNaN(oddFora)){
-    document.getElementById("evResultado").innerHTML="Preencha todas as odds.";
-    return;
-  }
-
-  const evCasa = (probCasa*oddCasa)-1;
-  const evEmpate = (probEmpate*oddEmpate)-1;
-  const evFora = (probFora*oddFora)-1;
-
-  function cor(ev){
-    return ev>0 ? "lime" : "red";
-  }
-
-  document.getElementById("evResultado").innerHTML=`
-    <strong>Valor Esperado:</strong><br>
-    Casa: <span style="color:${cor(evCasa)}">${(evCasa*100).toFixed(2)}%</span><br>
-    Empate: <span style="color:${cor(evEmpate)}">${(evEmpate*100).toFixed(2)}%</span><br>
-    Fora: <span style="color:${cor(evFora)}">${(evFora*100).toFixed(2)}%</span>
-  `;
-}
-  document.getElementById("analise").innerHTML="Analisando...";
-
-  const res = await fetch(`/api/analyze?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
-  const data = await res.json();
-
-  document.getElementById("analise").innerHTML = `
-    <h3>${data.home} vs ${data.away}</h3>
-    Vitória Casa: ${(data.probCasa*100).toFixed(2)}%<br>
-    Empate: ${(data.probEmpate*100).toFixed(2)}%<br>
-    Vitória Fora: ${(data.probFora*100).toFixed(2)}%
+    Fora: ${(data.probFora*100).toFixed(2)}%
   `;
 }
 
 carregarJogos();
 
 </script>
-
 </body>
 </html>
