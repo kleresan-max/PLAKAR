@@ -10,7 +10,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
 <style>
-*{box-sizing:border-box}
 body{
   margin:0;
   font-family:'Inter', sans-serif;
@@ -18,64 +17,40 @@ body{
   color:white;
 }
 
-/* HERO */
-.hero{
-  padding:40px 20px;
+header{
+  padding:20px;
   text-align:center;
-  background:radial-gradient(circle at top,#1e293b,#0f172a);
-}
-
-.hero h1{
-  font-size:26px;
   font-weight:800;
-  margin-bottom:10px;
+  font-size:22px;
+  background:#111827;
 }
 
-.hero p{
-  color:#94a3b8;
-  font-size:14px;
-}
-
-/* FILTER */
-.filter{
-  padding:15px;
-  text-align:center;
-}
-
-select{
-  padding:8px 12px;
-  border-radius:8px;
-  border:none;
-  background:#1e293b;
-  color:white;
-}
-
-/* GRID */
-.grid{
-  display:grid;
-  gap:15px;
+.container{
   padding:20px;
   max-width:1100px;
   margin:auto;
 }
 
-/* CARD */
+.league{
+  margin-top:30px;
+  font-size:14px;
+  font-weight:600;
+  color:#94a3b8;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  padding-bottom:5px;
+}
+
 .card{
-  background:linear-gradient(145deg,#1e293b,#172033);
-  border-radius:14px;
+  background:#1e293b;
+  margin-top:15px;
   padding:18px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.5);
+  border-radius:14px;
+  box-shadow:0 8px 25px rgba(0,0,0,0.4);
   transition:0.3s;
 }
 
 .card:hover{
   transform:translateY(-5px);
-}
-
-.league{
-  font-size:12px;
-  color:#94a3b8;
-  margin-bottom:12px;
 }
 
 .match{
@@ -87,155 +62,85 @@ select{
 .team{
   display:flex;
   align-items:center;
-  gap:8px;
+  gap:10px;
   width:40%;
 }
 
 .team img{
-  width:30px;
-  height:30px;
+  width:32px;
+  height:32px;
 }
 
-.score{
-  font-size:18px;
+.vs{
   font-weight:800;
-}
-
-.odds{
-  display:flex;
-  justify-content:space-between;
-  margin-top:15px;
-}
-
-.odd{
-  flex:1;
-  margin:0 5px;
-  background:#0f172a;
-  padding:8px;
-  border-radius:8px;
-  text-align:center;
-  font-size:13px;
-}
-
-.gold{background:#d4af37;color:black}
-.live{
-  background:#ef4444;
-  padding:4px 8px;
-  border-radius:6px;
-  font-size:10px;
-  animation:pulse 1s infinite;
-}
-
-@keyframes pulse{
-  0%{opacity:1}
-  50%{opacity:0.5}
-  100%{opacity:1}
-}
-
-/* BOTTOM NAV */
-.bottom{
-  position:fixed;
-  bottom:0;
-  width:100%;
-  background:#111827;
-  display:flex;
-  justify-content:space-around;
-  padding:12px 0;
-  border-top:1px solid rgba(255,255,255,0.1);
-}
-
-.bottom button{
-  background:none;
-  border:none;
+  font-size:14px;
   color:#94a3b8;
-  font-size:13px;
 }
 
-.bottom button.active{
-  color:#22c55e;
+.status{
+  margin-top:8px;
+  font-size:12px;
+  color:#facc15;
 }
 
 </style>
 </head>
 <body>
 
-<div class="hero">
-  <h1>⚡ KLERIN ANÁLISES AI</h1>
-  <p>Análises avançadas em tempo real</p>
-</div>
+<header>⚡ KLERIN ANÁLISES AI</header>
 
-<div class="filter">
-  <select id="ligaFiltro">
-    <option>Todas as Ligas</option>
-  </select>
-</div>
-
-<div class="grid" id="conteudo">
-  <!-- Jogos aparecerão aqui -->
-</div>
-
-<div class="bottom">
-  <button class="active">Radar</button>
-  <button>Ouro</button>
-  <button>Ao Vivo</button>
-</div>
+<div class="container" id="conteudo"></div>
 
 <script>
 
 async function carregar(){
 
-  try{
+  const res = await fetch("/api/games");
+  const jogos = await res.json();
 
-    const res = await fetch("/api/games");
-    const jogos = await res.json();
+  let html="";
+  let ligas = {};
 
-    let html="";
+  // Agrupar por liga
+  jogos.forEach(jogo=>{
+    if(!ligas[jogo.competition]){
+      ligas[jogo.competition]=[];
+    }
+    ligas[jogo.competition].push(jogo);
+  });
 
-    for(const jogo of jogos.slice(0,10)){
+  for(const liga in ligas){
 
-      const homeCrest = `https://crests.football-data.org/${jogo.homeId}.svg`;
-      const awayCrest = `https://crests.football-data.org/${jogo.awayId}.svg`;
+    html+=`<div class="league">${liga}</div>`;
+
+    ligas[liga].forEach(jogo=>{
 
       html+=`
       <div class="card">
-
-        <div class="league">
-          ${jogo.competition}
-          ${jogo.status==="LIVE"?'<span class="live">LIVE</span>':''}
-        </div>
-
         <div class="match">
           <div class="team">
-            <img src="${homeCrest}">
+            <img src="${jogo.homeCrest}">
             ${jogo.home}
           </div>
 
-          <div class="score">
-            ${jogo.homeGoals ?? "-"} x ${jogo.awayGoals ?? "-"}
-          </div>
+          <div class="vs">vs</div>
 
           <div class="team" style="justify-content:flex-end;">
             ${jogo.away}
-            <img src="${awayCrest}">
+            <img src="${jogo.awayCrest}">
           </div>
         </div>
 
-        <div class="odds">
-          <div class="odd">Casa</div>
-          <div class="odd">Empate</div>
-          <div class="odd">Fora</div>
+        <div class="status">
+          Status: ${jogo.status}
         </div>
-
       </div>
       `;
-    }
+    });
 
-    document.getElementById("conteudo").innerHTML = html;
-
-  }catch(e){
-    document.getElementById("conteudo").innerHTML="<p style='text-align:center;color:#94a3b8'>Erro ao carregar jogos</p>";
   }
 
+  document.getElementById("conteudo").innerHTML = html;
 }
 
 carregar();
