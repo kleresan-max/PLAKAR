@@ -6,71 +6,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0f172a">
 <link rel="manifest" href="manifest.json">
-
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
 <style>
 
+*{box-sizing:border-box}
+
 body{
   margin:0;
   font-family:'Inter', sans-serif;
-  background:linear-gradient(180deg,#0f172a,#0b1220);
+  background:linear-gradient(-45deg,#0f172a,#111827,#0b1220,#0f172a);
+  background-size:400% 400%;
+  animation:gradientMove 15s ease infinite;
   color:white;
 }
 
-/* HERO COM IMAGEM */
-.hero{
-  position:relative;
-  height:180px;
-  background:url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1600') center/cover no-repeat;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+@keyframes gradientMove{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
 }
 
-.hero::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:rgba(0,0,0,0.6);
-}
-
-.hero h1{
-  position:relative;
-  font-size:24px;
+header{
+  padding:20px;
+  text-align:center;
+  font-size:22px;
   font-weight:800;
+  background:rgba(0,0,0,0.4);
+  backdrop-filter:blur(10px);
 }
 
-/* BOTÕES SUPERIORES */
-.top-buttons{
-  display:flex;
-  justify-content:center;
-  gap:10px;
-  margin-top:-25px;
-  padding:0 20px;
-}
-
-.top-buttons button{
-  padding:10px 18px;
-  border-radius:25px;
-  border:none;
-  font-weight:600;
-  cursor:pointer;
-  background:#1e293b;
-  color:white;
-  box-shadow:0 5px 15px rgba(0,0,0,0.3);
-  transition:0.3s;
-}
-
-.top-buttons button:hover{
-  transform:translateY(-3px);
-}
-
-.top-buttons .active{
-  background:#22c55e;
-}
-
-/* CONTAINER */
 .container{
   padding:20px;
   max-width:1100px;
@@ -89,18 +54,20 @@ body{
 
 /* CARD */
 .card{
-  background:#1e293b;
+  background:rgba(30,41,59,0.8);
+  backdrop-filter:blur(8px);
   margin-top:15px;
-  padding:18px;
-  border-radius:14px;
-  box-shadow:0 8px 25px rgba(0,0,0,0.4);
+  padding:20px;
+  border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.5);
   transition:0.3s;
 }
 
 .card:hover{
-  transform:translateY(-5px);
+  transform:translateY(-6px);
 }
 
+/* TIMES */
 .match{
   display:flex;
   justify-content:space-between;
@@ -111,18 +78,65 @@ body{
   display:flex;
   align-items:center;
   gap:10px;
-  width:40%;
+  width:35%;
 }
 
 .team img{
-  width:34px;
-  height:34px;
+  width:36px;
+  height:36px;
 }
 
-.vs{
+.score{
+  font-size:26px;
   font-weight:800;
-  font-size:14px;
-  color:#94a3b8;
+  text-align:center;
+  width:20%;
+}
+
+/* ODDS */
+.odds{
+  display:flex;
+  justify-content:space-between;
+  margin-top:18px;
+  gap:10px;
+}
+
+.odd-box{
+  flex:1;
+  background:#0f172a;
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+  font-size:13px;
+  transition:0.3s;
+}
+
+.odd-box:hover{
+  background:#1e293b;
+}
+
+/* OURO */
+.gold-badge{
+  background:#d4af37;
+  color:black;
+  padding:4px 8px;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:bold;
+  margin-left:10px;
+}
+
+/* INDICADOR >=70% */
+.strong{
+  color:#22c55e;
+  font-weight:bold;
+  animation:pulse 1s infinite;
+}
+
+@keyframes pulse{
+  0%{opacity:1}
+  50%{opacity:0.4}
+  100%{opacity:1}
 }
 
 .status{
@@ -135,15 +149,7 @@ body{
 </head>
 <body>
 
-<div class="hero">
-  <h1>⚡ KLERIN ANÁLISES AI</h1>
-</div>
-
-<div class="top-buttons">
-  <button class="active">Radar</button>
-  <button>Ouro</button>
-  <button>Ao Vivo</button>
-</div>
+<header>⚡ KLERIN ANÁLISES AI</header>
 
 <div class="container" id="conteudo"></div>
 
@@ -168,17 +174,32 @@ async function carregar(){
 
     html+=`<div class="league">${liga}</div>`;
 
-    ligas[liga].forEach(jogo=>{
+    for(const jogo of ligas[liga]){
+
+      const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
+      const data = await r.json();
+
+      const mercados = [
+        {nome:"Casa",prob:data.probCasa},
+        {nome:"Fora",prob:data.probFora},
+        {nome:"Over 2.5",prob:data.over25},
+        {nome:"BTTS",prob:data.btts}
+      ];
+
+      const temOuro = mercados.some(m=>m.prob>=0.70);
 
       html+=`
       <div class="card">
+
         <div class="match">
           <div class="team">
             <img src="${jogo.homeCrest}">
             ${jogo.home}
           </div>
 
-          <div class="vs">vs</div>
+          <div class="score">
+            ${jogo.homeGoals ?? "-"} x ${jogo.awayGoals ?? "-"}
+          </div>
 
           <div class="team" style="justify-content:flex-end;">
             ${jogo.away}
@@ -187,18 +208,29 @@ async function carregar(){
         </div>
 
         <div class="status">
-          Status: ${jogo.status}
+          ${jogo.status}
+          ${temOuro ? '<span class="gold-badge">OURO</span>' : ''}
         </div>
+
+        <div class="odds">
+          ${mercados.map(m=>`
+            <div class="odd-box ${m.prob>=0.70 ? 'strong':''}">
+              ${m.nome}<br>
+              ${(m.prob*100).toFixed(0)}%
+            </div>
+          `).join("")}
+        </div>
+
       </div>
       `;
-    });
-
+    }
   }
 
   document.getElementById("conteudo").innerHTML = html;
 }
 
 carregar();
+setInterval(carregar,600000);
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js");
