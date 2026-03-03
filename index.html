@@ -4,82 +4,14 @@
 <meta charset="UTF-8">
 <title>Plakar Analytics</title>
 <style>
-
-body{
-  background:#0f172a;
-  color:white;
-  font-family:Arial;
-  margin:0;
-}
-
-header{
-  background:#111827;
-  padding:20px;
-  font-size:22px;
-  font-weight:bold;
-  text-align:center;
-}
-
-.container{
-  padding:20px 40px;
-}
-
-.league{
-  margin-top:30px;
-}
-
-.league-title{
-  font-size:18px;
-  margin-bottom:10px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-.flag{
-  width:24px;
-  height:16px;
-  object-fit:cover;
-}
-
-.card{
-  background:#1e293b;
-  padding:15px;
-  border-radius:10px;
-  margin-bottom:10px;
-  cursor:pointer;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.card:hover{
-  background:#334155;
-}
-
-.team{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-.crest{
-  width:28px;
-  height:28px;
-  object-fit:contain;
-}
-
-.result{
-  background:#111827;
-  padding:20px;
-  border-radius:10px;
-  margin-top:30px;
-}
-
-.prob{
-  margin:5px 0;
-}
-
+body{background:#0f172a;color:white;font-family:Arial;margin:0}
+header{background:#111827;padding:20px;font-size:22px;font-weight:bold;text-align:center}
+.container{padding:20px 40px}
+.section{margin-top:30px}
+.card{background:#1e293b;padding:12px;border-radius:8px;margin-bottom:8px}
+.league-title{font-size:18px;margin:20px 0 10px 0}
+.result{background:#111827;padding:20px;border-radius:10px;margin-top:30px}
+.small{font-size:14px;color:#94a3b8}
 </style>
 </head>
 <body>
@@ -88,69 +20,99 @@ header{
 
 <div class="container">
 
-<div id="jogos"></div>
+<div id="ranking"></div>
+
+<div class="section">
+  <h2>Jogos (Clique para Analisar)</h2>
+  <div id="jogos">Carregando...</div>
+</div>
+
 <div class="result" id="analise"></div>
 
 </div>
 
 <script>
 
-function countryToFlag(country){
-  if(!country) return "";
-  const code = country.slice(0,2).toLowerCase();
-  return `https://flagcdn.com/24x18/${code}.png`;
-}
-
 async function carregarJogos(){
 
   const res = await fetch("/api/games");
   const jogos = await res.json();
 
-  const container = document.getElementById("jogos");
-  container.innerHTML = "";
+  const rankingData = [];
 
-  const ligas = {};
+  // Limite de segurança para não estourar requisições
+  const jogosLimitados = jogos.slice(0,8);
+
+  for(const jogo of jogosLimitados){
+
+    const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
+    const data = await r.json();
+
+    rankingData.push({
+      home: jogo.home,
+      away: jogo.away,
+      probCasa: data.probCasa,
+      probFora: data.probFora,
+      over25: data.over25,
+      btts: data.btts
+    });
+  }
+
+  gerarRanking(rankingData);
+  mostrarJogos(jogos);
+}
+
+function gerarRanking(data){
+
+  const topCasa = [...data].sort((a,b)=>b.probCasa-a.probCasa).slice(0,5);
+  const topOver = [...data].sort((a,b)=>b.over25-a.over25).slice(0,5);
+  const topBTTS = [...data].sort((a,b)=>b.btts-a.btts).slice(0,5);
+
+  const div = document.getElementById("ranking");
+
+  div.innerHTML = `
+    <div class="section">
+      <h2>🔥 Ranking do Dia</h2>
+
+      <div class="league-title">🏆 Vitórias Mais Prováveis</div>
+      ${topCasa.map(j=>`
+        <div class="card">
+          ${j.home} vs ${j.away}
+          <div class="small">Vitória Casa: ${(j.probCasa*100).toFixed(2)}%</div>
+        </div>
+      `).join("")}
+
+      <div class="league-title">⚽ Over 2.5 Mais Prováveis</div>
+      ${topOver.map(j=>`
+        <div class="card">
+          ${j.home} vs ${j.away}
+          <div class="small">Over 2.5: ${(j.over25*100).toFixed(2)}%</div>
+        </div>
+      `).join("")}
+
+      <div class="league-title">🎯 BTTS Mais Prováveis</div>
+      ${topBTTS.map(j=>`
+        <div class="card">
+          ${j.home} vs ${j.away}
+          <div class="small">BTTS: ${(j.btts*100).toFixed(2)}%</div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function mostrarJogos(jogos){
+
+  const div = document.getElementById("jogos");
+  div.innerHTML = "";
 
   jogos.forEach(jogo=>{
-    if(!ligas[jogo.competition]){
-      ligas[jogo.competition] = {
-        country:jogo.country,
-        games:[]
-      };
-    }
-    ligas[jogo.competition].games.push(jogo);
-  });
-
-  for(const liga in ligas){
-
-    const leagueDiv = document.createElement("div");
-    leagueDiv.className="league";
-
-    leagueDiv.innerHTML=`
-      <div class="league-title">
-        <img class="flag" src="${countryToFlag(ligas[liga].country)}">
-        ${liga}
+    div.innerHTML += `
+      <div class="card" onclick="analisar('${jogo.homeId}','${jogo.awayId}','${jogo.home}','${jogo.away}')">
+        ${jogo.home} vs ${jogo.away}
       </div>
     `;
-
-    ligas[liga].games.forEach(jogo=>{
-      leagueDiv.innerHTML+=`
-        <div class="card" onclick="analisar('${jogo.homeId}','${jogo.awayId}','${jogo.home}','${jogo.away}')">
-          <div class="team">
-            <img class="crest" src="${jogo.homeCrest}">
-            ${jogo.home}
-          </div>
-          vs
-          <div class="team">
-            ${jogo.away}
-            <img class="crest" src="${jogo.awayCrest}">
-          </div>
-        </div>
-      `;
-    });
-
-    container.appendChild(leagueDiv);
-  }
+  });
 }
 
 async function analisar(homeId,awayId,home,away){
@@ -160,18 +122,16 @@ async function analisar(homeId,awayId,home,away){
   const res = await fetch(`/api/analyze?homeId=${homeId}&awayId=${awayId}&home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`);
   const data = await res.json();
 
-  function oddJusta(prob){
-    return (1/prob).toFixed(2);
-  }
+  function oddJusta(prob){ return (1/prob).toFixed(2); }
 
   document.getElementById("analise").innerHTML=`
     <h3>${data.home} vs ${data.away}</h3>
 
-    <div class="prob">Casa: ${(data.probCasa*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.probCasa)}</div>
-    <div class="prob">Empate: ${(data.probEmpate*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.probEmpate)}</div>
-    <div class="prob">Fora: ${(data.probFora*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.probFora)}</div>
-    <div class="prob">Over 2.5: ${(data.over25*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.over25)}</div>
-    <div class="prob">BTTS: ${(data.btts*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.btts)}</div>
+    Casa: ${(data.probCasa*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.probCasa)}<br>
+    Empate: ${(data.probEmpate*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.probEmpate)}<br>
+    Fora: ${(data.probFora*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.probFora)}<br>
+    Over 2.5: ${(data.over25*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.over25)}<br>
+    BTTS: ${(data.btts*100).toFixed(2)}% | Odd Justa: ${oddJusta(data.btts)}
   `;
 }
 
