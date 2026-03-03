@@ -11,18 +11,18 @@
   --panel:#111827;
   --card:#1e293b;
   --muted:#94a3b8;
-  --accent:#22c55e;
-  --danger:#ef4444;
+  --green:#22c55e;
+  --yellow:#facc15;
   --gold1:#f5d27a;
   --gold2:#d4a017;
+  --silver1:#d1d5db;
+  --silver2:#9ca3af;
 }
-
-*{box-sizing:border-box}
 
 body{
   margin:0;
   background:linear-gradient(180deg,#0b1220,#0f172a);
-  font-family:Inter, Arial;
+  font-family:Arial;
   color:white;
 }
 
@@ -31,30 +31,37 @@ header{
   justify-content:space-between;
   align-items:center;
   padding:18px 30px;
-  background:rgba(15,23,42,0.95);
-  backdrop-filter:blur(8px);
-  border-bottom:1px solid rgba(255,255,255,0.05);
+  background:#0f172a;
 }
 
 .brand{
   font-size:20px;
-  font-weight:600;
+  font-weight:bold;
+}
+
+.buttons{
+  display:flex;
+  gap:12px;
 }
 
 .gold-btn{
   background:linear-gradient(135deg,var(--gold1),var(--gold2));
   color:#111;
-  padding:10px 20px;
+  padding:10px 18px;
   border:none;
-  border-radius:30px;
-  font-weight:600;
+  border-radius:25px;
+  font-weight:bold;
   cursor:pointer;
-  box-shadow:0 0 25px rgba(212,160,23,0.6);
-  transition:0.3s;
 }
-.gold-btn:hover{
-  transform:translateY(-2px);
-  box-shadow:0 0 40px rgba(212,160,23,0.9);
+
+.silver-btn{
+  background:linear-gradient(135deg,var(--silver1),var(--silver2));
+  color:#111;
+  padding:10px 18px;
+  border:none;
+  border-radius:25px;
+  font-weight:bold;
+  cursor:pointer;
 }
 
 .container{
@@ -71,10 +78,6 @@ header{
   display:flex;
   justify-content:space-between;
   cursor:pointer;
-  transition:0.2s;
-}
-.game-card:hover{
-  background:#334155;
 }
 
 .result-panel{
@@ -82,7 +85,6 @@ header{
   background:var(--panel);
   padding:25px;
   border-radius:14px;
-  box-shadow:0 0 40px rgba(0,0,0,0.5);
 }
 
 .metric{
@@ -114,7 +116,6 @@ header{
   padding:25px;
   transition:0.4s;
   overflow:auto;
-  box-shadow:-10px 0 30px rgba(0,0,0,0.5);
   z-index:999;
 }
 .drawer.open{
@@ -126,18 +127,13 @@ header{
   padding:12px;
   border-radius:8px;
   margin-bottom:10px;
-  font-size:14px;
-  transition:0.3s;
-}
-.rank-card:hover{
-  background:#334155;
 }
 
 .close-btn{
   margin-top:15px;
   padding:8px 12px;
   border:none;
-  background:var(--danger);
+  background:#ef4444;
   color:white;
   border-radius:6px;
   cursor:pointer;
@@ -154,7 +150,10 @@ header{
 
 <header>
   <div class="brand">Plakar Analytics</div>
-  <button class="gold-btn" onclick="toggleRanking()">✨ OPORTUNIDADES DO DIA</button>
+  <div class="buttons">
+    <button class="gold-btn" onclick="abrirPremium()">🔥 Premium 70%+</button>
+    <button class="silver-btn" onclick="abrirMedio()">⚡ Nível Médio</button>
+  </div>
 </header>
 
 <div class="container">
@@ -165,9 +164,9 @@ header{
 </div>
 
 <div class="drawer" id="rankingDrawer">
-  <h2>🔥 Ranking Inteligente</h2>
+  <h2 id="rankingTitle"></h2>
   <div id="rankingContent"></div>
-  <button class="close-btn" onclick="toggleRanking()">Fechar</button>
+  <button class="close-btn" onclick="fechar()">Fechar</button>
 </div>
 
 <script>
@@ -180,6 +179,7 @@ async function carregarJogos(){
   const jogos = await res.json();
   const div=document.getElementById("games");
   div.innerHTML="";
+  rankingData=[];
 
   const limit=jogos.slice(0,8);
 
@@ -191,12 +191,11 @@ async function carregarJogos(){
       home:jogo.home,
       away:jogo.away,
       probCasa:data.probCasa,
+      probFora:data.probFora,
       over:data.over25,
       btts:data.btts
     });
   }
-
-  gerarRanking();
 
   jogos.forEach(jogo=>{
     div.innerHTML+=`
@@ -208,43 +207,59 @@ async function carregarJogos(){
   });
 }
 
-function gerarRanking(){
+function abrirPremium(){
+  filtrarRanking("premium");
+}
 
-  const topVit=[...rankingData].sort((a,b)=>b.probCasa-a.probCasa).slice(0,5);
-  const topOver=[...rankingData].sort((a,b)=>b.over-a.over).slice(0,5);
-  const topBTTS=[...rankingData].sort((a,b)=>b.btts-a.btts).slice(0,5);
+function abrirMedio(){
+  filtrarRanking("medio");
+}
+
+function filtrarRanking(tipo){
+
+  let filtrado;
+
+  if(tipo==="premium"){
+    document.getElementById("rankingTitle").innerText="🔥 Oportunidades Premium (70%+)";
+    filtrado = rankingData.filter(j =>
+      j.probCasa >= 0.70 ||
+      j.probFora >= 0.70 ||
+      j.over >= 0.70 ||
+      j.btts >= 0.70
+    );
+  } else {
+    document.getElementById("rankingTitle").innerText="⚡ Oportunidades Nível Médio (50% - 69%)";
+    filtrado = rankingData.filter(j =>
+      (j.probCasa >= 0.50 && j.probCasa < 0.70) ||
+      (j.probFora >= 0.50 && j.probFora < 0.70) ||
+      (j.over >= 0.50 && j.over < 0.70) ||
+      (j.btts >= 0.50 && j.btts < 0.70)
+    );
+  }
 
   const div=document.getElementById("rankingContent");
 
-  div.innerHTML=`
-    <h3>🏆 Vitórias</h3>
-    ${topVit.map(j=>`
+  if(filtrado.length===0){
+    div.innerHTML=`<div class="rank-card">Nenhuma oportunidade encontrada.</div>`;
+  } else {
+    div.innerHTML=filtrado.map(j=>`
       <div class="rank-card">
         ${j.home} vs ${j.away}
-        <div class="small">${(j.probCasa*100).toFixed(2)}%</div>
+        <div class="small">
+          ${j.probCasa>=0.50?`Casa ${(j.probCasa*100).toFixed(2)}%<br>`:''}
+          ${j.probFora>=0.50?`Fora ${(j.probFora*100).toFixed(2)}%<br>`:''}
+          ${j.over>=0.50?`Over ${(j.over*100).toFixed(2)}%<br>`:''}
+          ${j.btts>=0.50?`BTTS ${(j.btts*100).toFixed(2)}%<br>`:''}
+        </div>
       </div>
-    `).join("")}
+    `).join("");
+  }
 
-    <h3>⚽ Over 2.5</h3>
-    ${topOver.map(j=>`
-      <div class="rank-card">
-        ${j.home} vs ${j.away}
-        <div class="small">${(j.over*100).toFixed(2)}%</div>
-      </div>
-    `).join("")}
-
-    <h3>🎯 BTTS</h3>
-    ${topBTTS.map(j=>`
-      <div class="rank-card">
-        ${j.home} vs ${j.away}
-        <div class="small">${(j.btts*100).toFixed(2)}%</div>
-      </div>
-    `).join("")}
-  `;
+  document.getElementById("rankingDrawer").classList.add("open");
 }
 
-function toggleRanking(){
-  document.getElementById("rankingDrawer").classList.toggle("open");
+function fechar(){
+  document.getElementById("rankingDrawer").classList.remove("open");
 }
 
 async function analisar(homeId,awayId,home,away){
