@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Radar Profissional + Assertividade</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 
 body{
@@ -37,6 +38,15 @@ header{
   border-radius:6px;
   display:flex;
   justify-content:space-between;
+  align-items:center;
+}
+
+.left{
+  max-width:70%;
+}
+
+.right{
+  text-align:right;
 }
 
 .small{
@@ -55,17 +65,22 @@ header{
   margin-top:40px;
 }
 
+.loading{
+  font-size:18px;
+}
+
 </style>
 </head>
 <body>
 
 <header>
-🎯 Radar Profissional + Painel de Assertividade
+🎯 Radar Profissional + Painel de Assertividade  
+<span style="font-size:12px;color:#94a3b8;">Atualiza automaticamente a cada 10 minutos</span>
 </header>
 
 <div class="container">
 
-<div id="conteudo">Carregando...</div>
+<div id="conteudo" class="loading">Carregando análises...</div>
 
 <div class="panel">
 <h2>📊 Painel de Assertividade</h2>
@@ -76,7 +91,12 @@ header{
 
 <script>
 
+/* =========================
+   SALVAR PREVISÕES
+========================= */
+
 function salvarPrevisao(registro){
+
   let historico = JSON.parse(localStorage.getItem("historico") || "[]");
 
   const jaExiste = historico.find(h =>
@@ -90,6 +110,10 @@ function salvarPrevisao(registro){
   }
 }
 
+/* =========================
+   VERIFICAR RESULTADOS
+========================= */
+
 async function verificarResultados(){
 
   let historico = JSON.parse(localStorage.getItem("historico") || "[]");
@@ -98,27 +122,37 @@ async function verificarResultados(){
 
     if(registro.status !== "pendente") continue;
 
-    const res = await fetch(`/api/result?home=${encodeURIComponent(registro.home)}&away=${encodeURIComponent(registro.away)}`);
-    const resultado = await res.json();
+    try{
 
-    if(resultado.status !== "FINISHED") continue;
+      const res = await fetch(`/api/result?home=${encodeURIComponent(registro.home)}&away=${encodeURIComponent(registro.away)}`);
+      const resultado = await res.json();
 
-    const golsCasa = resultado.homeGoals;
-    const golsFora = resultado.awayGoals;
+      if(!resultado || resultado.status !== "FINISHED") continue;
 
-    let acertou = false;
+      const golsCasa = resultado.homeGoals;
+      const golsFora = resultado.awayGoals;
 
-    if(registro.mercado === "Casa" && golsCasa > golsFora) acertou = true;
-    if(registro.mercado === "Fora" && golsFora > golsCasa) acertou = true;
-    if(registro.mercado === "Over" && (golsCasa + golsFora) > 2) acertou = true;
-    if(registro.mercado === "BTTS" && golsCasa > 0 && golsFora > 0) acertou = true;
+      let acertou = false;
 
-    registro.status = acertou ? "acerto" : "erro";
+      if(registro.mercado === "Casa" && golsCasa > golsFora) acertou = true;
+      if(registro.mercado === "Fora" && golsFora > golsCasa) acertou = true;
+      if(registro.mercado === "Over" && (golsCasa + golsFora) > 2) acertou = true;
+      if(registro.mercado === "BTTS" && golsCasa > 0 && golsFora > 0) acertou = true;
+
+      registro.status = acertou ? "acerto" : "erro";
+
+    } catch(e){
+      console.log("Erro ao verificar resultado");
+    }
   }
 
   localStorage.setItem("historico", JSON.stringify(historico));
   atualizarEstatisticas();
 }
+
+/* =========================
+   ESTATÍSTICAS
+========================= */
 
 function atualizarEstatisticas(){
 
@@ -126,28 +160,76 @@ function atualizarEstatisticas(){
 
   const finalizados = historico.filter(h => h.status !== "pendente");
 
-  const acertos = finalizados.filter(h => h.status === "acerto").length;
-  const erros = finalizados.filter(h => h.status === "erro").length;
+  const mercados = {
+    Casa: { acertos:0, erros:0 },
+    Fora: { acertos:0, erros:0 },
+    Over: { acertos:0, erros:0 },
+    BTTS: { acertos:0, erros:0 }
+  };
 
-  const total = finalizados.length;
-  const taxa = total > 0 ? ((acertos/total)*100).toFixed(2) : 0;
+  finalizados.forEach(h=>{
+    if(h.status === "acerto") mercados[h.mercado].acertos++;
+    if(h.status === "erro") mercados[h.mercado].erros++;
+  });
+
+  function calcular(obj){
+    const total = obj.acertos + obj.erros;
+    if(total === 0) return { total:0, taxa:0 };
+    return {
+      total: total,
+      taxa: ((obj.acertos/total)*100).toFixed(2)
+    };
+  }
+
+  const casaStats = calcular(mercados.Casa);
+  const foraStats = calcular(mercados.Fora);
+  const overStats = calcular(mercados.Over);
+  const bttsStats = calcular(mercados.BTTS);
+
+  const totalAcertos = finalizados.filter(h=>h.status==="acerto").length;
+  const totalErros = finalizados.filter(h=>h.status==="erro").length;
+  const totalGeral = totalAcertos + totalErros;
+  const taxaGeral = totalGeral > 0 ? ((totalAcertos/totalGeral)*100).toFixed(2) : 0;
 
   document.getElementById("estatisticas").innerHTML = `
-    Total Avaliado: ${total}<br>
-    Acertos: ${acertos}<br>
-    Erros: ${erros}<br>
-    Taxa Geral: ${taxa}%
+    <strong>GERAL</strong><br>
+    Total Avaliado: ${totalGeral}<br>
+    Acertos: ${totalAcertos}<br>
+    Erros: ${totalErros}<br>
+    Taxa Geral: ${taxaGeral}%<br><br>
+
+    <strong>🏠 Casa</strong><br>
+    Avaliados: ${casaStats.total}<br>
+    Taxa: ${casaStats.taxa}%<br><br>
+
+    <strong>🚩 Fora</strong><br>
+    Avaliados: ${foraStats.total}<br>
+    Taxa: ${foraStats.taxa}%<br><br>
+
+    <strong>⚽ Over 2.5</strong><br>
+    Avaliados: ${overStats.total}<br>
+    Taxa: ${overStats.taxa}%<br><br>
+
+    <strong>🎯 BTTS</strong><br>
+    Avaliados: ${bttsStats.total}<br>
+    Taxa: ${bttsStats.taxa}%
   `;
 }
 
+/* =========================
+   CARREGAR E ANALISAR
+========================= */
+
 async function carregar(){
+
+  document.getElementById("conteudo").innerHTML = "Atualizando análises...";
 
   const res = await fetch("/api/games");
   const jogos = await res.json();
 
   let conteudo = "";
 
-  for(const jogo of jogos.slice(0,20)){
+  for(const jogo of jogos.slice(0,25)){
 
     const r = await fetch(`/api/analyze?homeId=${jogo.homeId}&awayId=${jogo.awayId}&home=${encodeURIComponent(jogo.home)}&away=${encodeURIComponent(jogo.away)}`);
     const data = await r.json();
@@ -160,6 +242,7 @@ async function carregar(){
     ];
 
     mercados.forEach(m=>{
+
       if(m.prob >= 0.55){
 
         salvarPrevisao({
@@ -176,9 +259,11 @@ async function carregar(){
 
         conteudo += `
           <div class="card">
-            <div>
+            <div class="left">
               ${m.nome} – ${jogo.home} vs ${jogo.away}
-              <div class="small">${(m.prob*100).toFixed(2)}% | Odd Justa ${(1/m.prob).toFixed(2)}</div>
+              <div class="small">
+                ${(m.prob*100).toFixed(2)}% | Odd Justa ${(1/m.prob).toFixed(2)}
+              </div>
             </div>
             <div class="${classe}">
               ${(m.prob*100).toFixed(2)}%
@@ -193,6 +278,10 @@ async function carregar(){
 
   verificarResultados();
 }
+
+/* =========================
+   INICIALIZAÇÃO
+========================= */
 
 carregar();
 setInterval(carregar, 600000);
